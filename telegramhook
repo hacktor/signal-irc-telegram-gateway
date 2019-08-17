@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+#
+# Webhook for gw2ircbot. The hook can be set by the command:
+#
+# curl -F "url=https://host.domain.com/cgi-bin/gw2irc" https://api.telegram.org/botXXXXXXXXX:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/setWebhook
+#
+# messages sent to $chat_id are filtered a little and then written
+# to a unix domain socket, for processing by the bot
+#
+# 2019-08-17, Ruben de Groot
+
+use strict;
+use CGI qw/:standard/;
+use JSON;
+use Data::Dumper;
+
+my $config = do "./auth.cfg";
+die "No usable config found!\nHint: look at auth.cfg.example\n" unless ref $config eq "HASH";
+
+my $token = $config->{token};
+my $chat_id = $config->{chat_id};
+my $ok = '{"ok":true,"result":true}';
+my $debug = (defined $ENV('DEBUG')) ? $ENV('DEBUG') : 0;
+
+open my $log, '>>', "/tmp/gw2irc.log";
+
+my $cgi    = CGI->new;
+my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
+my $dj = decode_json( $body );
+
+my $user_id = (defined $dj->{'message'}->{'from'}->{'id'} and $dj->{'message'}->{'from'}->{'id'} =~ /^\d+$/) ?
+    $dj->{'message'}->{'from'}->{'id'} : 0;
+my $text = (defined $dj->{'message'}->{'text'}) ? $dj->{'message'}->{'text'} : "";
+my $first = (defined $dj->{'message'}->{'from'}->{'first_name'}) ? $dj->{'message'}->{'from'}->{'first_name'} : "";
+my $last = (defined $dj->{'message'}->{'from'}->{'last_name'}) ? $dj->{'message'}->{'from'}->{'last_name'} : "";
+my $user = (defined $dj->{'message'}->{'from'}->{'username'}) ? $dj->{'message'}->{'from'}->{'username'} : "";
+
+print $log "`date`; I get this update from telegram:\n" if $debug;
+print $log Dumper($dj) if $debug;
+
+print $cgi->header('application/json');
+print $ok."\n\n";
+

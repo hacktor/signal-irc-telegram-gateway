@@ -1,0 +1,8 @@
+# copy this file to auth.cfg and fill in token and chat_id of the bot and telegram group
+# irc nick and channel
+{
+  token   => 'XXXXXXXXX:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  chat_id => '-nnnnnnnnn',
+  nick    => 'nick',
+  channel => '#channel
+}
