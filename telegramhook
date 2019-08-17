@@ -2,7 +2,7 @@
 #
 # Webhook for gw2ircbot. The hook can be set by the command:
 #
-# curl -F "url=https://host.domain.com/cgi-bin/gw2irc" https://api.telegram.org/botXXXXXXXXX:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/setWebhook
+# curl -F "url=https://webserver/cgi-bin/telehook" https://api.telegram.org/bot$TOKEN/setWebhook
 #
 # messages sent to $chat_id are filtered a little and then written
 # to a unix domain socket, for processing by the bot
