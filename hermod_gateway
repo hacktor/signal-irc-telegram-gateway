@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use POE qw(Component::IRC);
+use HTTP::Tiny;
+use URI::Escape;
+use JSON qw( decode_json );
+use Data::Dumper;
+
+my $config = do "./hermod.cfg";
+die "No usable config found!\nHint: look at hermod.cfg.example\n" unless ref $config eq "HASH";
+
+my $nickname = $config->{nick};
+my $token    = $config->{token};
+my $chat_id  = $config->{chat_id};
+my $server   = $config->{ircnode};
+my $channel  = $config->{channel};
+my $group    = $config->{group};
+my $port     = $config->{port};
+my $usessl   = $config->{usessl};
+my $ircname  = 'Hermod gateway from irc to telegram';
+my $URL = "https://api.telegram.org/bot$token/sendMessage";
+
+# We create a new PoCo-IRC object
+my $irc = POE::Component::IRC->spawn(
+   nick    => $nickname,
+   ircname => $ircname,
+   server  => $server,
+   Port    => $port,
+   UseSSL  => $usessl,
+) or die "Oh noooo! $!";
+
+POE::Session->create(
+    package_states => [
+        main => [ qw(_default _start irc_001 irc_public ) ],
+    ],
+    heap => { irc => $irc },
+);
+
+$poe_kernel->run();
+
+sub _start {
+    my $heap = $_[HEAP];
+
+    # retrieve our component's object from the heap where we stashed it
+    my $irc = $heap->{irc};
+
+    $irc->yield( register => 'all' );
+    $irc->yield( connect => { } );
+    return;
+}
+
+sub irc_001 {
+    my $sender = $_[SENDER];
+
+    # Since this is an irc_* event, we can get the component's object by
+    # accessing the heap of the sender. Then we register and connect to the
+    # specified server.
+    my $irc = $sender->get_heap();
+
+    print "Connected to ", $irc->server_name(), "\n";
+
+    # we join our channel
+    $irc->yield( join => $channel );
+    return;
+}
+
+sub irc_public {
+  my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
+  my $nick = ( split /!/, $who )[0];
+  #my $channel = $where->[0];
+  my @data;
+  my $coin = '';
+  return if ( $what =~ /verboden woord/ );
+  return if ( $what =~ /bzerk/i );
+  return if ( $nick =~ /bzerk/i );
+  # we relay all messages straight to telegram
+  my $text = uri_escape("Msg in IRC $channel by $nick: $what");
+  my $data = "chat_id=$chat_id&text=$text";
+  HTTP::Tiny->new->get( "$URL?$data" );
+#  $data = "URL: $URL?" . uri_escape("$data");
+#  $irc->yield( privmsg => $channel => $data );
+  $data = "This was relayed to telegram group $group";
+  $irc->yield( privmsg => $channel => $data );
+  return;
+}
+
+# We registered for all events, this will produce some debug info.
+sub _default {
+    my ($event, $args) = @_[ARG0 .. $#_];
+    my @output = ( "$event: " );
+
+    for my $arg (@$args) {
+        if ( ref $arg eq 'ARRAY' ) {
+            push( @output, '[' . join(', ', @$arg ) . ']' );
+        }
+        else {
+            push ( @output, "'$arg'" );
+        }
+    }
+    print join ' ', @output, "\n";
+    die "I got disconnected :( :(\nKilling myself..\n" if grep(/irc_disconnect/,@output);
+    return;
+}
+
+sub telepoller {
+    my $reply = "Polling telegram\n";
+    $irc->yield( privmsg => $channel => $reply );
+    sleep 10;
+}
+

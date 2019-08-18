@@ -1,10 +1,12 @@
 #!/usr/bin/perl -w
 #
-# Webhook for gw2ircbot. The hook can be set by the command:
+# Webhook for Hermod Gateway Bot in webhook mode. The hook can be set by the command:
 #
-# curl -F "url=https://webserver/cgi-bin/telehook" https://api.telegram.org/bot$TOKEN/setWebhook
+# curl -F "url=https://webserver/cgi-bin/telegramhook" https://api.telegram.org/bot$TOKEN/setWebhook
 #
-# messages sent to $chat_id are filtered a little and then written
+# reply wil be: {"ok":true,"result":true,"description":"Webhook was set"}
+#
+# messages are filtered a little and then written
 # to a unix domain socket, for processing by the bot
 #
 # 2019-08-17, Ruben de Groot
@@ -12,17 +14,22 @@
 use strict;
 use CGI qw/:standard/;
 use JSON;
+use IO::Socket::UNIX;
 use Data::Dumper;
 
-my $config = do "./auth.cfg";
-die "No usable config found!\nHint: look at auth.cfg.example\n" unless ref $config eq "HASH";
+my $config = do "./hermod.cfg";
+die "No usable config found!\nHint: look at hermod.cfg.example\n" unless ref $config eq "HASH";
 
-my $token = $config->{token};
-my $chat_id = $config->{chat_id};
+my $socket = $config->{socket};
+my $group = $config->{group};
 my $ok = '{"ok":true,"result":true}';
-my $debug = (defined $ENV('DEBUG')) ? $ENV('DEBUG') : 0;
+my $debug = (defined $ENV{'DEBUG'}) ? $ENV{'DEBUG'} : 0;
 
-open my $log, '>>', "/tmp/gw2irc.log";
+open my $log, '>>', "/tmp/telegramhook.log" if $debug;
+my $client = IO::Socket::UNIX->new(
+               Type => SOCK_STREAM(),
+               Peer => $socket,
+) or die "Unable to open Socket $socket\n";
 
 my $cgi    = CGI->new;
 my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
@@ -32,11 +39,10 @@ my $user_id = (defined $dj->{'message'}->{'from'}->{'id'} and $dj->{'message'}->
     $dj->{'message'}->{'from'}->{'id'} : 0;
 my $text = (defined $dj->{'message'}->{'text'}) ? $dj->{'message'}->{'text'} : "";
 my $first = (defined $dj->{'message'}->{'from'}->{'first_name'}) ? $dj->{'message'}->{'from'}->{'first_name'} : "";
-my $last = (defined $dj->{'message'}->{'from'}->{'last_name'}) ? $dj->{'message'}->{'from'}->{'last_name'} : "";
-my $user = (defined $dj->{'message'}->{'from'}->{'username'}) ? $dj->{'message'}->{'from'}->{'username'} : "";
 
 print $log "`date`; I get this update from telegram:\n" if $debug;
 print $log Dumper($dj) if $debug;
+print $client "Msg in telegram group $group by $first: $text\n";
 
 print $cgi->header('application/json');
 print $ok."\n\n";

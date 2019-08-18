@@ -3,6 +3,12 @@
 {
   token   => 'XXXXXXXXX:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   chat_id => '-nnnnnnnnn',
+  group   => '#groupname',
+
+  ircnode => 'irc.freenode.net',
+  channel => '#channel',
+  port    => 6667,
+  UseSSL  => 0,
   nick    => 'nick',
-  channel => '#channel
+  socket  => '/tmp/hermod.sock',
 }
