@@ -1,0 +1,15 @@
+{
+  "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
+  "chat_id": "-19999999",
+  "group"  : "mygroup",
+
+  "ircnode": "irc.freenode.net",
+  "channel": "#channel",
+  "port"   : 6697,
+  "UseSSL" : 1,
+  "nick"   : "telegram_gateway",
+  "password": "xxxxxxxx",
+
+  "filename": "/var/www/log/telegram.log"
+}
+
