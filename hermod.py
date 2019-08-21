@@ -24,7 +24,7 @@ else:
     irc = irc_C
 
 print "Establishing connection to [%s]" % (config['ircnode'])
-# Connect
+# Connect to IRC channel
 irc.connect((config['ircnode'], config['port']))
 irc.setblocking(False)
 irc.send("PASS %s\n" % (config['password']))
@@ -40,7 +40,7 @@ f = open(config['logfile'], 'r')
 while True:
     time.sleep(1)
 
-    # Tail File
+    # Tail telegram log File, forward lines to IRC
     try:
         if firstcall:
             f.seek(0,2)
@@ -54,6 +54,7 @@ while True:
         print "Error with file %s" % (config['logfile'])
         print e
 
+    # Read new IRC messages, forward lines to telegram
     try:
         buf = irc.recv(2040)
         

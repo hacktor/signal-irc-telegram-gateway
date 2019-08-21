@@ -5,6 +5,7 @@ often considered the messenger of the gods
 
 These scripts act as a gateway between a telegram group and irc channel.
 The first thing to do is to register a telegram bot with the botfather.
+Then you can add the bot to the telegram channel you want to share with IRC.
 Note the telegram API token and find the telegram group chat\_id.
 
 Reference: [Telegram Bot API](https://core.telegram.org/bots/api "Bot API")
@@ -29,7 +30,7 @@ appropriately
   "logfile": "/var/www/log/telegram.log"
 }
 ```
-token, chat\_id and and group relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
+token, chat\_id and group relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
 for details. 
 
 ircnode, channel, port, nick and password relate to... IRC. Any value for UseSSL other than 0 will cause the connection to be SSL enabled.
@@ -54,8 +55,20 @@ Make sure the telegram bot you are using has privacy mode disabled (or is admin 
 Verify the bot is receiving messages in the telegram group by checking the logfile. Then you can start the IRC part:
 
 ```bash
-python ./hermod.py
+$ python hermod.py 
+Establishing connection to [irc.freenode.net]
+:weber.freenode.net NOTICE * :*** Looking up your hostname...
+:weber.freenode.net NOTICE * :*** Checking Ident
+:weber.freenode.net NOTICE * :*** Couldn't look up your hostname
+:weber.freenode.net NOTICE * :*** No Ident response
+:weber.freenode.net 001 telegram_gateway :Welcome to the freenode Internet Relay Chat Network telegram_gateway
+...
+...
+
 ```
-that's all. You will see messages scrolling showing the login proces on IRC.
+that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run this in screen(1) from cron
+```bash
+@reboot screen -d -m python /home/hacktor/bin/hermod.py
+```
 
 

@@ -22,21 +22,11 @@ open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 die "No usable config found!\nHint: look at hermod.json.example\n" unless ref $config eq "HASH";
 
-my $nickname = $config->{nick};
-my $token    = $config->{token};
-my $chat_id  = $config->{chat_id};
-my $server   = $config->{ircnode};
-my $channel  = $config->{channel};
-my $group    = $config->{group};
-my $port     = $config->{port};
-my $usessl   = $config->{usessl};
-my $logfile  = $config->{logfile};
-(my $dbgfile  = $logfile) =~ s/\.log$/.debug/;
-
+(my $dbgfile  = $config->{logfile}) =~ s/\.log$/.debug/;
 my $ok = '{"ok":true,"result":true}';
 
 # communicate with bot through its POE::Component::IRC::Plugin::FollowTail plugin
-open my $log, '>>:utf8', $logfile;
+open my $log, '>>:utf8', $config->{logfile};
 open my $dbg, '>>', $dbgfile;
 
 my $cgi    = CGI->new;
@@ -47,7 +37,7 @@ print $dbg $body."\n";
 
 # check type of msg and chat_id
 exit unless defined $dj->{'message'}->{'chat'}->{'id'};
-exit unless $dj->{'message'}->{'chat'}->{'id'} == $chat_id;
+exit unless $dj->{'message'}->{'chat'}->{'id'} == $config->{chat_id};
 
 my $user_id = (defined $dj->{'message'}->{'from'}->{'id'} and $dj->{'message'}->{'from'}->{'id'} =~ /^\d+$/) ?
     $dj->{'message'}->{'from'}->{'id'} : 0;

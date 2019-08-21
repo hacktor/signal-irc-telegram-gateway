@@ -13,31 +13,21 @@ use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::SSLify);
 use HTTP::Tiny;
 use URI::Escape;
 use JSON qw( decode_json );
-use Data::Dumper;
 
 my $cfg = "/etc/hermod.json";
 open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 
-my $nickname = $config->{nick};
-my $token    = $config->{token};
-my $chat_id  = $config->{chat_id};
-my $server   = $config->{ircnode};
-my $channel  = $config->{channel};
-my $group    = $config->{group};
-my $port     = $config->{port};
-my $usessl   = $config->{usessl};
-my $logfile  = $config->{logfile};
 my $ircname  = 'Hermod gateway from irc to telegram';
-my $URL = "https://api.telegram.org/bot$token/sendMessage";
+my $URL = "https://api.telegram.org/bot$config->{token}/sendMessage";
 
 # We create a new PoCo-IRC object
 my $irc = POE::Component::IRC->spawn(
-   nick    => $nickname,
+   nick    => $config->{nick},
    ircname => $ircname,
-   server  => $server,
-   Port    => $port,
-   UseSSL  => $usessl,
+   server  => $config->{ircnode},
+   Port    => $config->{port},
+   UseSSL  => $config->{usessl},
 ) or die "Oh noooo! $!";
 
 POE::Session->create(
@@ -55,7 +45,7 @@ sub _start {
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
     $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
-        filename => $logfile,
+        filename => $config->{logfile},
     ));
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
@@ -73,28 +63,26 @@ sub irc_001 {
     print "Connected to ", $irc->server_name(), "\n";
 
     # we join our channel
-    $irc->yield( join => $channel );
+    $irc->yield( join => $config->{channel} );
     return;
 }
 
 sub irc_public {
   my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
   my $nick = ( split /!/, $who )[0];
-  #my $channel = $where->[0];
   my @data;
   my $coin = '';
   return if ( $what =~ /forbidden words/ );
   # we relay all messages straight to telegram
-  my $text = uri_escape("Msg in IRC $channel by $nick: $what");
-  my $data = "chat_id=$chat_id&text=$text";
+  my $text = uri_escape("Msg in IRC $config->{channel} by $nick: $what");
+  my $data = "chat_id=$config{chat_id}&text=$text";
   HTTP::Tiny->new->get( "$URL?$data" );
   return;
 }
 
 sub irc_tail_input {
-    my ($kernel, $sender, $logfile, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
-    $irc->yield( privmsg => $channel => $input );
-    #$kernel->post( $sender, 'privmsg', $channel, $input );
+    my ($kernel, $sender, $config->{logfile}, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
+    $irc->yield( privmsg => $config->{channel} => $input );
     return;
 }
 
@@ -118,7 +106,7 @@ sub _default {
 
 sub telepoller {
     my $reply = "Polling telegram\n";
-    $irc->yield( privmsg => $channel => $reply );
+    $irc->yield( privmsg => $config->{channel} => $reply );
     sleep 10;
 }
 
