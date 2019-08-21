@@ -1,6 +1,9 @@
-# irc-telegram-gateway
+# Hermod IRC - Telegram Gateway
 
-Scripts acting as a gateway between a telegram group and irc channel.
+[Hermod, or Hermóðr](https://en.wikipedia.org/wiki/Herm%C3%B3%C3%B0r) is a figure in Norse mythology,
+often considered the messenger of the gods
+
+These scripts act as a gateway between a telegram group and irc channel.
 The first thing to do is to register a telegram bot with the botfather.
 Note the telegram API token and find the telegram group chat\_id.
 
