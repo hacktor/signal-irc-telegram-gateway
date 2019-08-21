@@ -10,6 +10,6 @@
   "nick"   : "telegram_gateway",
   "password": "xxxxxxxx",
 
-  "filename": "/var/www/log/telegram.log"
+  "logfile": "/var/www/log/telegram.log"
 }
 

@@ -1,14 +1,23 @@
 #!/usr/bin/perl
+#
+# IRC Bot for Hermod Telegram Gateway. Works with telegramhook for receiving
+# messages from a telegram group.
+#
+# 2019-08-17, Ruben de Groot
+#
+# Abandoned because of SSL problems. Use the python version instead
+
 use strict;
 use warnings;
-use POE qw(Component::IRC);
+use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::SSLify);
 use HTTP::Tiny;
 use URI::Escape;
 use JSON qw( decode_json );
 use Data::Dumper;
 
-my $config = do "./hermod.cfg";
-die "No usable config found!\nHint: look at hermod.cfg.example\n" unless ref $config eq "HASH";
+my $cfg = "/etc/hermod.json";
+open my $fh, '<', $cfg or die "error opening $cfg $!";
+my $config = decode_json do { local $/; <$fh> };
 
 my $nickname = $config->{nick};
 my $token    = $config->{token};
@@ -18,6 +27,7 @@ my $channel  = $config->{channel};
 my $group    = $config->{group};
 my $port     = $config->{port};
 my $usessl   = $config->{usessl};
+my $logfile  = $config->{logfile};
 my $ircname  = 'Hermod gateway from irc to telegram';
 my $URL = "https://api.telegram.org/bot$token/sendMessage";
 
@@ -32,7 +42,7 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public ) ],
+        main => [ qw(_default _start irc_001 irc_public irc_tail_input ) ],
     ],
     heap => { irc => $irc },
 );
@@ -44,7 +54,9 @@ sub _start {
 
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
-
+    $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
+        filename => $logfile,
+    ));
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
     return;
@@ -71,18 +83,19 @@ sub irc_public {
   #my $channel = $where->[0];
   my @data;
   my $coin = '';
-  return if ( $what =~ /verboden woord/ );
-  return if ( $what =~ /bzerk/i );
-  return if ( $nick =~ /bzerk/i );
+  return if ( $what =~ /forbidden words/ );
   # we relay all messages straight to telegram
   my $text = uri_escape("Msg in IRC $channel by $nick: $what");
   my $data = "chat_id=$chat_id&text=$text";
   HTTP::Tiny->new->get( "$URL?$data" );
-#  $data = "URL: $URL?" . uri_escape("$data");
-#  $irc->yield( privmsg => $channel => $data );
-  $data = "This was relayed to telegram group $group";
-  $irc->yield( privmsg => $channel => $data );
   return;
+}
+
+sub irc_tail_input {
+    my ($kernel, $sender, $logfile, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
+    $irc->yield( privmsg => $channel => $input );
+    #$kernel->post( $sender, 'privmsg', $channel, $input );
+    return;
 }
 
 # We registered for all events, this will produce some debug info.

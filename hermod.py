@@ -1,4 +1,10 @@
 #!/usr/bin/python
+# IRC Bot for Hermod Telegram Gateway. Works with telegramhook for receiving
+# messages from a telegram group.
+#
+# 2019-08-17, Ruben de Groot
+#
+# This is the python version of what started as a perl project.
 
 import socket
 import ssl
@@ -12,7 +18,10 @@ with open('/etc/hermod.json') as f:
     config = json.load(f)
 
 irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
-irc = ssl.wrap_socket(irc_C)
+if config['UseSSL'] != 0:
+    irc = ssl.wrap_socket(irc_C)
+else:
+    irc = irc_C
 
 print "Establishing connection to [%s]" % (config['ircnode'])
 # Connect
@@ -26,12 +35,12 @@ irc.send("JOIN "+ config['channel'] +"\n")
 
 
 firstcall = True
-f = open(config['filename'], 'r')
+f = open(config['logfile'], 'r')
 
 while True:
     time.sleep(1)
 
-    # Tail Files
+    # Tail File
     try:
         if firstcall:
             f.seek(0,2)
@@ -42,7 +51,7 @@ while True:
             irc.send("PRIVMSG %s :%s" % (config['channel'], line))
             print "Send to IRC: " + line
     except Exception as e:
-        print "Error with file %s" % (config['filename'])
+        print "Error with file %s" % (config['logfile'])
         print e
 
     try:
