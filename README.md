@@ -90,9 +90,10 @@ Establishing connection to [irc.freenode.net]
 ...
 
 ```
-that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run this in screen(1) from cron
+that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
 ```bash
-@reboot screen -d -m python /home/hacktor/bin/hermod.py
+@reboot screen -S hermod -d -m python /home/hacktor/bin/hermod.py
+@reboot screen -S poller -d -m python /home/hacktor/bin/signalpoller
 ```
 
 
