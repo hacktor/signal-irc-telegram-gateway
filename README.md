@@ -32,8 +32,8 @@ appropriately
   "nick"   : "gateway",
   "password": "xxxxxxxx",
 
-  "telfile": "/home/hermod/log/telegram.log"
-  "sigfile": "/home/hermod/log/signal.log"
+  "telfile": "/home/hermod/log/telegram.log",
+  "sigfile": "/home/hermod/log/signal.log",
   "tosignal": "/home/hermod/log/tosignal.log"
 }
 ```
