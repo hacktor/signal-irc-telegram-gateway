@@ -1,4 +1,9 @@
 {
+  "signal_phone": "+316xxxxxxxxxx",
+  "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
+  "signal_cli": "/home/hermod/bin/signal-cli",
+  "signal_db": "/home/hermod/signal.db",
+
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",
   "group"  : "mygroup",
@@ -10,6 +15,8 @@
   "nick"   : "telegram_gateway",
   "password": "xxxxxxxx",
 
-  "logfile": "/var/www/log/telegram.log"
+  "telfile": "/home/hermod/telegram.log",
+  "sigfile": "/home/hermod/signal.log",
+  "tosignal": "/var/www/log/tosignal.log"
 }
 

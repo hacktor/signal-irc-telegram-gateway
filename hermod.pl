@@ -45,7 +45,7 @@ sub _start {
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
     $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
-        filename => $config->{logfile},
+        filename => $config->{telfile},
     ));
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
@@ -81,7 +81,7 @@ sub irc_public {
 }
 
 sub irc_tail_input {
-    my ($kernel, $sender, $config->{logfile}, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
+    my ($kernel, $sender, $config->{telfile}, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
     $irc->yield( privmsg => $config->{channel} => $input );
     return;
 }
