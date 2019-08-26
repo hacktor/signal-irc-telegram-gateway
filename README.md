@@ -1,4 +1,4 @@
-# Hermod IRC - Telegram Gateway
+# Hermod Signal - IRC - Telegram Gateway
 
 [Hermod, or Hermóðr](https://en.wikipedia.org/wiki/Herm%C3%B3%C3%B0r) is a figure in Norse mythology,
 often considered the messenger of the gods
@@ -19,7 +19,7 @@ appropriately
   "signal_phone": "+316xxxxxxxxxx",
   "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
   "signal_cli": "/home/hermod/bin/signal-cli",
-  "signal_db": "/home/hermod/signal.db",
+  "signal_db": "/home/hermod/var/signal.db",
 
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",
@@ -46,7 +46,7 @@ telfile is the connection between the telegram webhook and the IRC bot. Can be a
 
 sigfile is the connection between the signal poller and the IRC bot. Should be writeable by the poller and readable by the bot
 
-tosignal is the reverse of sigfile. the IRC bot writes to this file while the poller will read it and send its contents to the signal group
+tosignal is the reverse of sigfile. the IRC bot writes to this file while the poller will read it and send new content to the signal group
 
 ## Setting up the hook
 
@@ -71,8 +71,19 @@ look at its output; when something is said in the signal group you will see outp
 ```text
 {"envelope":{"source":"+316xxxxxxxx","sourceDevice":1,"relay":null,"timestamp":1566735523785,"isReceipt":false,"dataMessage":{"timestamp":1566735523785,"message":"Hello","expiresInSeconds":3600,"attachments":[],"groupInfo":{"groupId":"XXXXXXXXXXXXXXXXXXXXXX==","members":null,"name":null,"type":"DELIVER"}},"syncMessage":null,"callMessage":null}}
 ```
-Update **signal**\_**gid** in hermod.json  with the **groupId** in this output
+Update **signal**\_**gid** in hermod.json  with the **groupId** in this output. Set **signal**\_**phone** to the number you registered with **signal-cli**
 
+The signal poller does not see usernames, only telephone numbers. It would be kind of rude to relay these telephone numbers to Telegram or IRC, so the telephone numbers are anonymized as "Anonymous-XXXX", where XXXX are the last 4 numbers of the telephone number.
+
+The bot keeps a small sqlite database **signal**\_**db**, used for mapping signal telephone numbers (in the signal group) to nicknames. Members of the signal group can set their nick by issuing the command:
+```text
+!setnick nickname
+```
+In the signal group. The bot will update the mapping in the database and confirm this by saying:
+```text
+anonymous-XXXX is now known as nickname
+```
+In all channels.
 
 ## Start the IRC bot
 
