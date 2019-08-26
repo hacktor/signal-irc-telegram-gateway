@@ -49,8 +49,8 @@ my $last = (defined $dj->{'message'}->{'from'}->{'last_name'}) ? $dj->{'message'
 # split lines and write to logs for signal and irc
 my @lines = split /\n/, $text;
 foreach my $line (@lines) {
-    print $sig "[Telegram $first $last]: $line\n";
-    print $irc unidecode("[Telegram $first $last]: $line\n");
+    print $sig "[Tg $first $last]: $line\n" if $line;
+    print $irc unidecode("[Tg $first $last]: $line\n");
 }
 
 finish("Message relayed\n");

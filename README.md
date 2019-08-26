@@ -46,7 +46,7 @@ telfile is the connection between the telegram webhook and the IRC bot. Can be a
 
 sigfile is the connection between the signal poller and the IRC bot. Should be writeable by the poller and readable by the bot
 
-tosignal is the reverse of sigfile. the poller will read it and send its contents to the signal group
+tosignal is the reverse of sigfile. the IRC bot writes to this file while the poller will read it and send its contents to the signal group
 
 ## Setting up the hook
 
@@ -76,7 +76,7 @@ Update **signal**\_**gid** in hermod.json  with the **groupId** in this output
 
 ## Start the IRC bot
 
-Verify the bot is receiving messages in the telegram group by checking the logfile. Then you can start the IRC part:
+Verify the bot will be receiving messages in the telegram group by checking the **telfile**. Then you can start the IRC part:
 
 ```bash
 $ python hermod.py 
@@ -93,7 +93,7 @@ Establishing connection to [irc.freenode.net]
 that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
 ```bash
 @reboot screen -S hermod -d -m python /home/hacktor/bin/hermod.py
-@reboot screen -S poller -d -m python /home/hacktor/bin/signalpoller
+@reboot screen -S poller -d -m /home/hacktor/bin/signalpoller
 ```
 
 
