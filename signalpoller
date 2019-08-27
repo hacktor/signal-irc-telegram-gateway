@@ -20,47 +20,47 @@ open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 $config->{nicks} = getalias($config);
 
+open my $tail, "<", $config->{tosignal} or die @_;
 my $inode = (stat($config->{tosignal}))[1];
-open(LFILE,$config->{tosignal}) or die @_;
+open my $debug, ">>", $config->{signal_debug} if defined $config->{signal_debug};
 
 # SEEK_END
-seek(LFILE, 0, 2) or die @_;
+seek($tail, 0, 2) or die @_;
 
 # tailing the tosignal file for stuff to send
 for (;;) {
-    sleep 5;
     # check if logfile hasn't turned over below our feet
     if ($inode != (stat($config->{tosignal}))[1]) {
-        close(LFILE);
+        close $tail;
         $inode = (stat($config->{tosignal}))[1];
-        open(LFILE,$config->{tosignal}) or next;
+        open($tail,$config->{tosignal}) or next;
     } else {
         # SEEK_CUR
-        seek(LFILE, 0, 1);
+        seek($tail, 0, 1);
     }
 
     # send found messages to signal group
-    my $lines = join "\n", (<LFILE>);
+    my $lines = join "\n", (<$tail>);
     qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" ) if $lines;
 
     # now poll the signal group for new messages
+print "pol\n";
     poller($config);
 }
 
 sub poller {
     my $json = JSON->new->allow_nonref;
-    while(1) {
-        my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
-        for my $line (@lines) {
-            print $line; chomp $line;
-            my $sigmsg = $json->decode($line);
-            my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";
-            my $group = (defined $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId}) ? $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId} : "";
-            my $text = (defined $sigmsg->{envelope}->{dataMessage}->{message}) ? $sigmsg->{envelope}->{dataMessage}->{message} : "";
+    my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
+    for my $line (@lines) {
+        print $debug $line;
+        print $line; chomp $line;
+        my $sigmsg = $json->decode($line);
+        my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";
+        my $group = (defined $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId}) ? $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId} : "";
+        my $text = (defined $sigmsg->{envelope}->{dataMessage}->{message}) ? $sigmsg->{envelope}->{dataMessage}->{message} : "";
 
-            # relay new messages in the group
-            relay($config,$sender,$text) if $sender and $text and $group eq $config->{signal_gid};
-        }
+        # relay new messages in the group
+        relay($config,$sender,$text) if $sender and $text and $group eq $config->{signal_gid};
     }
 }
 

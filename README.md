@@ -85,6 +85,11 @@ anonymous-XXXX is now known as nickname
 ```
 In all channels.
 
+You need to create an sqlite database file:
+```sql
+create table alias (phone text unique not null, nick text);
+```
+
 ## Start the IRC bot
 
 Verify the bot will be receiving messages in the telegram group by checking the **telfile**. Then you can start the IRC part:
@@ -103,8 +108,8 @@ Establishing connection to [irc.freenode.net]
 ```
 that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
 ```bash
-@reboot screen -S hermod -d -m python /home/hacktor/bin/hermod.py
-@reboot screen -S poller -d -m /home/hacktor/bin/signalpoller
+@reboot screen -S hermod -d -m python /home/hermod/bin/hermod.py
+@reboot screen -S poller -d -m /home/hermod/bin/signalpoller
 ```
 
 

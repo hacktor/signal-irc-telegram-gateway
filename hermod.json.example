@@ -3,6 +3,7 @@
   "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
   "signal_cli": "/home/hermod/bin/signal-cli",
   "signal_db": "/home/hermod/var/signal.db",
+  "signal_debug": "/home/hermod/log/signal.debug"
 
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",
@@ -17,6 +18,6 @@
 
   "telfile": "/home/hermod/log/telegram.log",
   "sigfile": "/home/hermod/log/signal.log",
-  "tosignal": "/hermod/hermod/log/tosignal.log"
+  "tosignal": "/hermod/hermod/log/tosignal.log",
 }
 

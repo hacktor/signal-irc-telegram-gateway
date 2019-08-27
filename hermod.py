@@ -13,7 +13,6 @@ import time
 import requests
 import urllib
 import json
-import subprocess
 
 ## Settings
 with open('/etc/hermod.json') as f:
