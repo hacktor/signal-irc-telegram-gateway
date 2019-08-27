@@ -2,40 +2,65 @@
 #
 # Signal Poller for Hermod Gateway Bot.
 #
+# Keeping a tail on the tosignal file for messages to send to signal.
 # Polling the signal group for new messages. These are send to telegram 
 # and irc
 #
 # 2019-08-23, Ruben de Groot
 
 use strict;
-use threads;
 use JSON;
 use HTTP::Tiny;
 use URI::Escape;
 use Text::Unidecode;
 use DBI;
-use Data::Dumper;
 
 my $cfg = "/etc/hermod.json";
 open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 $config->{nicks} = getalias($config);
 
-print Dumper($config);
+my $inode = (stat($config->{tosignal}))[1];
+open(LFILE,$config->{tosignal}) or die @_;
 
-# start a seperate thread to send messages to the signal group
-threads->create(\&sender,$config);
+# SEEK_END
+seek(LFILE, 0, 2) or die @_;
 
-my $json = JSON->new->allow_nonref;
-while(1) {
-    my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
-    for my $line (@lines) {
-        print $line; chomp $line;
-        my $sigmsg = $json->decode($line);
-        my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";
-        my $group = (defined $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId}) ? $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId} : "";
-        my $text = (defined $sigmsg->{envelope}->{dataMessage}->{message}) ? $sigmsg->{envelope}->{dataMessage}->{message} : "";
-        relay($config,$sender,$text) if $sender and $text and $group eq $config->{signal_gid};
+# tailing the tosignal file for stuff to send
+for (;;) {
+    sleep 5;
+    # check if logfile hasn't turned over below our feet
+    if ($inode != (stat($config->{tosignal}))[1]) {
+        close(LFILE);
+        $inode = (stat($config->{tosignal}))[1];
+        open(LFILE,$config->{tosignal}) or next;
+    } else {
+        # SEEK_CUR
+        seek(LFILE, 0, 1);
+    }
+
+    # send found messages to signal group
+    my $lines = join "\n", (<LFILE>);
+    qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" ) if $lines;
+
+    # now poll the signal group for new messages
+    poller($config);
+}
+
+sub poller {
+    my $json = JSON->new->allow_nonref;
+    while(1) {
+        my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
+        for my $line (@lines) {
+            print $line; chomp $line;
+            my $sigmsg = $json->decode($line);
+            my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";
+            my $group = (defined $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId}) ? $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId} : "";
+            my $text = (defined $sigmsg->{envelope}->{dataMessage}->{message}) ? $sigmsg->{envelope}->{dataMessage}->{message} : "";
+
+            # relay new messages in the group
+            relay($config,$sender,$text) if $sender and $text and $group eq $config->{signal_gid};
+        }
     }
 }
 
@@ -63,7 +88,7 @@ sub relay {
             print $w "$text";
             close $w;
 
-            open my $w, ">>", $config->{sigfile} or die "Died opening sigfile $config->{sigfile}";
+            open $w, ">>", $config->{sigfile} or die "Died opening sigfile $config->{sigfile}";
             print $w "[Sg] $text";
             close $w;
 
@@ -88,30 +113,6 @@ sub relay {
     print $w "[Sg $anonsender]: $text\n";
 
     return;
-}
-
-sub sender {
-    my $config = shift;
-    my $inode = (stat($config->{tosignal}))[1];
-    open(LFILE,$config->{tosignal}) or die @_;
-
-    # SEEK_END
-    seek(LFILE, 0, 2) or die @_;
-
-    for (;;) {
-        sleep 5;
-        # check if logfile hasn't turned over below our feet
-        if ($inode != (stat($config->{tosignal}))[1]) {
-            close(LFILE);
-            $inode = (stat($config->{tosignal}))[1];
-            open(LFILE,$config->{tosignal}) or next;
-        } else {
-            # SEEK_CUR
-            seek(LFILE, 0, 1);
-        }
-        my $lines = join "\n", (<LFILE>);
-        qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" ) if $lines;
-    }
 }
 
 sub getalias {
