@@ -39,12 +39,14 @@ for (;;) {
         seek($tail, 0, 1);
     }
 
-    # send found messages to signal group
-    my $lines = join "\n", (<$tail>);
-    qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" ) if $lines;
+    # send new messages to signal group
+    my $lines = do { local $/; <$tail> };
+    if ($lines) {
+        my $out = qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" );
+        print $debug $out if defined $config->{signal_debug};
+    }
 
     # now poll the signal group for new messages
-print "pol\n";
     poller($config);
 }
 
@@ -52,7 +54,7 @@ sub poller {
     my $json = JSON->new->allow_nonref;
     my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
     for my $line (@lines) {
-        print $debug $line;
+        print $debug $line if defined $config->{signal_debug};
         print $line; chomp $line;
         my $sigmsg = $json->decode($line);
         my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";

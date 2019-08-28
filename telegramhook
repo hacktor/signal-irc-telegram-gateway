@@ -22,19 +22,18 @@ open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 die "No usable config found!\nHint: look at hermod.json.example\n" unless ref $config eq "HASH";
 
-(my $dbgfile  = $config->{telfile}) =~ s/\.log$/.debug/;
 my $ok = '{"ok":true,"result":true}';
 
 # communicate with bot through a logfile
 open my $irc, '>>:utf8', $config->{telfile};
 open my $sig, '>>', $config->{tosignal};
-open my $dbg, '>>', $dbgfile;
+open my $dbg, '>>', $config->{telegram_debug} if defined $config->{telegram_debug};
 
 my $cgi    = CGI->new;
 my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
 my $dj = decode_json( $body );
 
-print $dbg $body."\n";
+print $dbg "$body\n" if defined $config->{telegram_debug};
 
 # check type of msg and chat_id
 finish("no chat id\n") unless defined $dj->{'message'}->{'chat'}->{'id'};
@@ -56,7 +55,7 @@ foreach my $line (@lines) {
 finish("Message relayed\n");
 
 sub finish {
-    print $dbg shift;
+    print $dbg shift if defined $config->{telegram_debug};
     print $cgi->header(-type => 'application/json', -connection => 'close');
     print $ok."\n\n";
     exit();

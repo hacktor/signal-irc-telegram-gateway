@@ -3,21 +3,22 @@
   "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
   "signal_cli": "/home/hermod/bin/signal-cli",
   "signal_db": "/home/hermod/var/signal.db",
-  "signal_debug": "/home/hermod/log/signal.debug"
+  "signal_debug": "/home/hermod/log/signal.debug",
 
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",
   "group"  : "mygroup",
+  "telegram_debug": "/home/hermod/log/telegram.debug",
 
   "ircnode": "irc.freenode.net",
   "channel": "#channel",
   "port"   : 6697,
   "UseSSL" : 1,
-  "nick"   : "telegram_gateway",
+  "nick"   : "gateway",
   "password": "xxxxxxxx",
 
   "telfile": "/home/hermod/log/telegram.log",
   "sigfile": "/home/hermod/log/signal.log",
-  "tosignal": "/hermod/hermod/log/tosignal.log",
+  "tosignal": "/home/hermod/log/tosignal.log",
 }
 
