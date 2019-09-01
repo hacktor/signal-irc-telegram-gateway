@@ -14,7 +14,6 @@ use CGI qw/:standard/;
 use JSON;
 use IO::Socket::UNIX;
 use Data::Dumper;
-use utf8;
 use Text::Unidecode;
 
 my $cfg = "/etc/hermod.json";
@@ -44,6 +43,9 @@ my $user_id = (defined $dj->{'message'}->{'from'}->{'id'} and $dj->{'message'}->
 my $text = (defined $dj->{'message'}->{'text'}) ? $dj->{'message'}->{'text'} : "";
 my $first = (defined $dj->{'message'}->{'from'}->{'first_name'}) ? $dj->{'message'}->{'from'}->{'first_name'} : "";
 my $last = (defined $dj->{'message'}->{'from'}->{'last_name'}) ? $dj->{'message'}->{'from'}->{'last_name'} : "";
+
+$text .= "\nsends a photo" if defined $dj->{'message'}->{'photo'};
+$text .= "\nsends a sticker" if defined $dj->{'message'}->{'sticker'};
 
 # split lines and write to logs for signal and irc
 my @lines = split /\n/, $text;
