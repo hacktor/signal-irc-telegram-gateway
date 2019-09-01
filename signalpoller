@@ -51,15 +51,20 @@ for (;;) {
 }
 
 sub poller {
+    my $config = shift;
     my $json = JSON->new->allow_nonref;
     my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
     for my $line (@lines) {
         print $debug $line if defined $config->{signal_debug};
         print $line; chomp $line;
         my $sigmsg = $json->decode($line);
-        my $sender = (defined $sigmsg->{envelope}->{source}) ? $sigmsg->{envelope}->{source} : "";
-        my $group = (defined $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId}) ? $sigmsg->{envelope}->{dataMessage}->{groupInfo}->{groupId} : "";
-        my $text = (defined $sigmsg->{envelope}->{dataMessage}->{message}) ? $sigmsg->{envelope}->{dataMessage}->{message} : "";
+        next unless defined $sigmsg->{envelope}->{dataMessage};
+        $sigmsg = $sigmsg->{envelope};
+        my $datamsg = $sigmsg->{dataMessage};
+
+        my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
+        my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
+        my $text = (defined $datamsg->{message}) ? $datamsg->{message} : "";
 
         # relay new messages in the group
         relay($config,$sender,$text) if $sender and $text and $group eq $config->{signal_gid};
@@ -111,8 +116,11 @@ sub relay {
 
     # relay to IRC
     $text = unidecode($text);
+    my @lines = split /\n/, $text;
     open my $w, ">>", $config->{sigfile} or die "Died opening sigfile $config->{sigfile}";
-    print $w "[Sg $anonsender]: $text\n";
+    foreach my $line (@lines) {
+        print $w "[Sg $anonsender]: $line\n" if $line;
+    }
 
     return;
 }
