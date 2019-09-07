@@ -12,8 +12,6 @@
 use strict;
 use CGI qw/:standard/;
 use JSON;
-use IO::Socket::UNIX;
-use Data::Dumper;
 use Text::Unidecode;
 
 my $cfg = "/etc/hermod.json";
