@@ -4,6 +4,7 @@
   "signal_cli": "/home/hermod/bin/signal-cli",
   "signal_db": "/home/hermod/var/signal.db",
   "signal_debug": "/home/hermod/log/signal.debug",
+  "signal_anon": "Anonymous",
 
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",

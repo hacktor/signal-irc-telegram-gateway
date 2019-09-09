@@ -42,8 +42,9 @@ for (;;) {
     # send new messages to signal group
     my $lines = do { local $/; <$tail> };
     if ($lines) {
-        my $out = qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" );
-        print $debug $out if defined $config->{signal_debug};
+        open my $sc, "|-", $config->{signal_cli}, "send", "-g", $config->{signal_gid};
+        print $sc $lines;
+        close $sc;
     }
 
     # now poll the signal group for new messages
@@ -66,7 +67,7 @@ for (;;) {
         if (defined $config->{nicks}->{$sender}) {
             $anonsender = $config->{nicks}->{$sender};
         } else {
-            $anonsender =~ s/.*(\d\d\d\d)$/Piraat-$1/;
+            $anonsender =~ s/.*(\d\d\d\d)$/$config->{signal_anon}-$1/;
             nickhelp($config,$sender,$anonsender);
             setalias($config,$sender,$anonsender);
         }
@@ -138,7 +139,7 @@ sub setalias {
 
 sub nickhelp {
     my ($config,$phone,$nick) = @_;
-    my $text = 'You do not have a nickname set. You are now known as '.$nick.'. To change this, simply type !setnick yournickname on a new line ini the group or in a private message to me.';
+    my $text = 'You do not have a nickname set. You are now known as '.$nick.'. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
     my $out = qx( $config->{signal_cli} -u $config->{signal_phone} send -m "$text" $phone );
     print $debug $out if defined $config->{signal_debug};
 }

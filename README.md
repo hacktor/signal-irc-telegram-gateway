@@ -20,6 +20,8 @@ appropriately
   "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
   "signal_cli": "/home/hermod/bin/signal-cli",
   "signal_db": "/home/hermod/var/signal.db",
+  "signal_debug": "/home/hermod/var/signal.debug",
+  "signal_anon": "Anonymous",
 
   "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
   "chat_id": "-19999999",
@@ -37,6 +39,8 @@ appropriately
   "tosignal": "/home/hermod/log/tosignal.log"
 }
 ```
+signal\_phone is the phone number used by signal-cli. It has to be added to the group (signal\_gid). signal\_anon is a string used to partly anonymize telephone numbers when relaying messages to the other channels.
+
 token, chat\_id and group relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
 for details. 
 
@@ -111,5 +115,4 @@ that's all. You will see messages scrolling showing the login proces on IRC. You
 @reboot screen -S hermod -d -m python /home/hermod/bin/hermod.py
 @reboot screen -S poller -d -m /home/hermod/bin/signalpoller
 ```
-
 
