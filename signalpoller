@@ -42,8 +42,9 @@ for (;;) {
     # send new messages to signal group
     my $lines = do { local $/; <$tail> };
     if ($lines) {
-        my $out = qx( $config->{signal_cli} -u $config->{signal_phone} send -g $config->{signal_gid} -m "$lines" );
-        print $debug $out if defined $config->{signal_debug};
+        open my $sc, "|-", $config->{signal_cli}, "-u", $config->{signal_phone}, "send", "-g", $config->{signal_gid};
+        print $sc $lines;
+        close $sc;
     }
 
     # now poll the signal group for new messages
