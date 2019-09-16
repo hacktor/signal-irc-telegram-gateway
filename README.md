@@ -15,31 +15,38 @@ Reference: [Telegram Bot API](https://core.telegram.org/bots/api "Bot API")
 Make a copy of the file hermod.json.example to /etc/hermod.json and change values
 appropriately
 ```json
-{
-  "signal_phone": "+316xxxxxxxxxx",
-  "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
-  "signal_cli": "/home/hermod/bin/signal-cli",
-  "signal_db": "/home/hermod/var/signal.db",
-  "signal_debug": "/home/hermod/var/signal.debug",
-  "signal_anon": "Anonymous",
-
-  "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
-  "chat_id": "-19999999",
-  "group"  : "mygroup",
-
-  "ircnode": "irc.freenode.net",
-  "channel": "#channel",
-  "port"   : 6697,
-  "UseSSL" : 1,
-  "nick"   : "gateway",
-  "password": "xxxxxxxx",
-
-  "telfile": "/home/hermod/log/telegram.log",
-  "sigfile": "/home/hermod/log/signal.log",
-  "tosignal": "/home/hermod/log/tosignal.log"
+{       
+    "signal": {
+        "phone": "+316xxxxxxxxxx",
+        "gid": "XXXXXXXXXXXXXXXXXXXXX==",
+        "cli": "/home/hermod/bin/signal-cli",
+        "file": "/home/hermod/log/signal.log",
+        "infile": "/home/hermod/log/tosignal.log",
+        "db": "/home/hermod/var/signal.db",
+        "debug": "/home/hermod/log/signal.debug",
+        "anon": "Anonymous",
+        "attachment_path": "/var/www/html/signal",
+        "url": "https://hermod.example.com/signal"
+    },  
+    "telegram": {
+        "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
+        "chat_id": "-19999999",
+        "file": "/home/hermod/log/telegram.log",
+        "debug": "/home/hermod/log/telegram.debug",
+        "attachments": "/var/www/html/telegram",
+        "url": "https://hermod.example.com/telegram"
+    },  
+    "irc": {
+        "ircnode": "irc.freenode.net",
+        "channel": "#channel",
+        "port"   : 6697,
+        "UseSSL" : 1,
+        "nick"   : "gateway",
+        "password": "xxxxxxxx",
+    }
 }
 ```
-signal\_phone is the phone number used by signal-cli. It has to be added to the group (signal\_gid). signal\_anon is a string used to partly anonymize telephone numbers when relaying messages to the other channels.
+signal-\>phone is the phone number used by signal-cli. It has to be added to the group (signal-\>gid). signal-\>anon is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with signal-cli
 
 token, chat\_id and group relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
 for details. 
@@ -69,17 +76,24 @@ Make sure the telegram bot you are using has privacy mode disabled (or is admin 
 
 To connect with Signal, you'll need to install [signal-cli](https://github.com/AsamK/signal-cli)
 
+To register the signal phone number you need to run these commands:
+```bash
+$ signal-cli -u +316xxxxxxxxxx register
+$ signal-cli -u +316xxxxxxxxxx verify XXX-XXX
+```
+The XXX-XXX code you wil get in an SMS text message so you'll have to actually install the simcard in some telephone. This is the only time it's needed.
+
 Next is to add a phone number you control into a signal group. You can start **signalpoller** and 
 look at its output; when something is said in the signal group you will see output like this:
 
 ```text
 {"envelope":{"source":"+316xxxxxxxx","sourceDevice":1,"relay":null,"timestamp":1566735523785,"isReceipt":false,"dataMessage":{"timestamp":1566735523785,"message":"Hello","expiresInSeconds":3600,"attachments":[],"groupInfo":{"groupId":"XXXXXXXXXXXXXXXXXXXXXX==","members":null,"name":null,"type":"DELIVER"}},"syncMessage":null,"callMessage":null}}
 ```
-Update **signal**\_**gid** in hermod.json  with the **groupId** in this output. Set **signal**\_**phone** to the number you registered with **signal-cli**
+Update **signal**->**gid** in hermod.json  with the **groupId** in this output. Set **signal**->**phone** to the number you registered with **signal-cli**
 
 The signal poller does not see usernames, only telephone numbers. It would be kind of rude to relay these telephone numbers to Telegram or IRC, so the telephone numbers are anonymized as "Anonymous-XXXX", where XXXX are the last 4 numbers of the telephone number.
 
-The bot keeps a small sqlite database **signal**\_**db**, used for mapping signal telephone numbers (in the signal group) to nicknames. Members of the signal group can set their nick by issuing the command:
+The bot keeps a small sqlite database **signal**->**db**, used for mapping signal telephone numbers (in the signal group) to nicknames. Members of the signal group can set their nick by issuing the command:
 ```text
 !setnick nickname
 ```
@@ -93,10 +107,15 @@ You need to create an sqlite database file:
 ```sql
 create table alias (phone text unique not null, nick text);
 ```
+## Directories for attachments and urls
+
+The photo's and attachments send by people in telegram and signal groups are downloaded and placed in suitable directories. For Telegram, use the telegram-\>attachments configuration option. Make sure this directory is shared over a HTTP webserver like apache and it is writeable by the webserver. Configure telegram-\>url to point to this same directory.
+
+The signal-cli program by default saves all attachments in a directory **~/.local/share/signal-cli/attachments**. The easiest way to handle this is to move this entire directory to somewhere below the documentroot of the webserver and symlink it.
 
 ## Start the IRC bot
 
-Verify the bot will be receiving messages in the telegram group by checking the **telfile**. Then you can start the IRC part:
+Verify the bot will be receiving messages in the telegram group by checking the **telegram->file**. Then you can start the IRC part:
 
 ```bash
 $ python hermod.py 

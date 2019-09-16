@@ -1,9 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # IRC Bot for Hermod Telegram and Signal Gateway. Works with sigpoller for receiving
 # messages from a signal group and telegramhook for a telegram group.
 # configuration in /etc/hermod.json
 #
-# 2019-08-17, Ruben de Groot
+# 2019, Ruben de Groot
 #
 # This is the python version of what started as a perl project.
 
@@ -16,32 +16,32 @@ import json
 
 ## Settings
 with open('/etc/hermod.json') as f:
-    config = json.load(f)
+    cfg = json.load(f)
 
 irc_C = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #defines the socket
-if config['UseSSL'] != 0:
+if cfg['irc']['UseSSL'] != 0:
     irc = ssl.wrap_socket(irc_C)
 else:
     irc = irc_C
 
-print "Establishing connection to [%s]" % (config['ircnode'])
+print "Establishing connection to [%s]" % (cfg['irc']['node'])
 # Connect to IRC channel
-irc.connect((config['ircnode'], config['port']))
+irc.connect((cfg['irc']['node'], cfg['irc']['port']))
 irc.setblocking(False)
-irc.send("PASS %s\n" % (config['password']))
-irc.send("USER "+ config['nick'] +" "+ config['nick'] +" "+ config['nick'] +" :herMod-Test\n")
-irc.send("NICK "+ config['nick'] +"\n")
-irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (config['nick'], config['password']))
-irc.send("JOIN "+ config['channel'] +"\n")
+irc.send("PASS %s\n" % (cfg['irc']['password']))
+irc.send("USER "+ cfg['irc']['nick'] +" "+ cfg['irc']['nick'] +" "+ cfg['irc']['nick'] +" :herMod-Test\n")
+irc.send("NICK "+ cfg['irc']['nick'] +"\n")
+irc.send("PRIVMSG nickserv :identify %s %s\r\n" % (cfg['irc']['nick'], cfg['irc']['password']))
+irc.send("JOIN "+ cfg['irc']['channel'] +"\n")
 
 
 firstcall = True
-f = open(config['sigfile'], 'r')
-g = open(config['telfile'], 'r')
+f = open(cfg['signal']['file'], 'r')
+g = open(cfg['telegram']['file'], 'r')
 
 while True:
     time.sleep(1)
-    URL = "https://api.telegram.org/bot" + config['token'] + "/sendMessage?chat_id=" + config['chat_id'] + "&text="
+    URL = "https://api.telegram.org/bot" + cfg['telegram']['token'] + "/sendMessage?chat_id=" + cfg['telegram']['chat_id'] + "&text="
 
     # Tail log Files, forward lines to IRC
     try:
@@ -53,10 +53,10 @@ while True:
         sigline = f.readline()
         telline = g.readline()
         if sigline != '':
-            irc.send("PRIVMSG %s :%s" % (config['channel'], sigline))
+            irc.send("PRIVMSG %s :%s" % (cfg['irc']['channel'], sigline))
             print "Send to IRC: " + sigline
         if telline != '':
-            irc.send("PRIVMSG %s :%s" % (config['channel'], telline))
+            irc.send("PRIVMSG %s :%s" % (cfg['irc']['channel'], telline))
             print "Send to IRC: " + telline
     except Exception as e:
         print e
@@ -68,11 +68,11 @@ while True:
         texts = buf.splitlines()
         for text in texts:
             print text
-            URL = "https://api.telegram.org/bot" + config['token'] + "/sendMessage?chat_id=" + config['chat_id'] + "&text="
+            URL = "https://api.telegram.org/bot" + cfg['telegram']['token'] + "/sendMessage?chat_id=" + cfg['telegram']['chat_id'] + "&text="
 
-            if text.find('PRIVMSG ' + config['channel']) != -1:
+            if text.find('PRIVMSG ' + cfg['irc']['channel']) != -1:
                 nick = text.partition('!')[0].strip(':')
-                msg = text.rpartition('PRIVMSG ' + config['channel'] + ' :')[2]
+                msg = text.rpartition('PRIVMSG ' + cfg['irc']['channel'] + ' :')[2]
                 if msg[1:7] == 'ACTION':
                     msg = "[IRC] ***" + nick + " " + msg.rpartition('ACTION')[2]
                 else:
@@ -82,7 +82,7 @@ while True:
                 requests.get(URL + urllib.quote(msg))
 
                 # Send to Signal
-                h = open(config['tosignal'], "a")
+                h = open(cfg['signal']['infile'], "a")
                 h.write(msg)
                 h.write("\n")
                 h.close()

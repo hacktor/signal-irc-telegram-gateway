@@ -1,25 +1,31 @@
 {
-  "signal_phone": "+316xxxxxxxxxx",
-  "signal_gid": "XXXXXXXXXXXXXXXXXXXXX==",
-  "signal_cli": "/home/hermod/bin/signal-cli",
-  "signal_db": "/home/hermod/var/signal.db",
-  "signal_debug": "/home/hermod/log/signal.debug",
-  "signal_anon": "Anonymous",
-
-  "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
-  "chat_id": "-19999999",
-  "group"  : "mygroup",
-  "telegram_debug": "/home/hermod/log/telegram.debug",
-
-  "ircnode": "irc.freenode.net",
-  "channel": "#channel",
-  "port"   : 6697,
-  "UseSSL" : 1,
-  "nick"   : "gateway",
-  "password": "xxxxxxxx",
-
-  "telfile": "/home/hermod/log/telegram.log",
-  "sigfile": "/home/hermod/log/signal.log",
-  "tosignal": "/home/hermod/log/tosignal.log",
+    "signal": {
+        "phone": "+316xxxxxxxxxx",
+        "gid": "XXXXXXXXXXXXXXXXXXXXX==",
+        "cli": "/home/hermod/bin/signal-cli",
+        "file": "/home/hermod/log/signal.log",
+        "infile": "/home/hermod/log/tosignal.log",
+        "db": "/home/hermod/var/signal.db",
+        "debug": "/home/hermod/log/signal.debug",
+        "anon": "Anonymous",
+        "attachment_path": "/var/www/html/signal",
+        "url": "https://hermod.example.com/signal"
+    },
+    "telegram": {
+        "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
+        "chat_id": "-19999999",
+        "file": "/home/hermod/log/telegram.log",
+        "debug": "/home/hermod/log/telegram.debug",
+        "attachments": "/var/www/html/telegram",
+        "url": "https://hermod.example.com/telegram"
+    },
+    "irc": {
+        "ircnode": "irc.freenode.net",
+        "channel": "#channel",
+        "port"   : 6697,
+        "UseSSL" : 1,
+        "nick"   : "gateway",
+        "password": "xxxxxxxx",
+    }
 }
 

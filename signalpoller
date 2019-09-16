@@ -6,52 +6,65 @@
 # Polling the signal group for new messages. These are send to telegram 
 # and irc
 #
-# 2019-08-23, Ruben de Groot
+# 2019, Ruben de Groot
 
 use strict;
 use JSON;
 use HTTP::Tiny;
+use HTTP::Request::Common;
+use LWP::UserAgent;
 use URI::Escape;
 use Text::Unidecode;
 use DBI;
 
-my $cfg = "/etc/hermod.json";
-open my $fh, '<', $cfg or die "error opening $cfg $!";
-my $config = decode_json do { local $/; <$fh> };
-$config->{nicks} = getalias($config);
+open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
+my $cfg = decode_json do { local $/; <$fh> };
+$cfg->{nicks} = getalias($cfg);
 
-open my $tail, "<", $config->{tosignal} or die @_;
-my $inode = (stat($config->{tosignal}))[1];
-open my $debug, ">>", $config->{signal_debug} if defined $config->{signal_debug};
+open my $tail, "<", $cfg->{signal}->{infile} or die @_;
+my $inode = (stat($cfg->{signal}->{infile}))[1];
+
+open my $debug, ">>", $cfg->{signal}->{debug} if defined $cfg->{signal}->{debug};
 
 # SEEK_END
 seek($tail, 0, 2) or die @_;
 
-# tailing the tosignal file for stuff to send
+# tailing signal infile and telegram downloads for stuff to send
 for (;;) {
-    # check if logfile hasn't turned over below our feet
-    if ($inode != (stat($config->{tosignal}))[1]) {
+    sleep 1; # not to get too tight loop
+    # check if logfiles haven't turned over below our feet
+    if ($inode != (stat($cfg->{signal}->{infile}))[1]) {
         close $tail;
-        $inode = (stat($config->{tosignal}))[1];
-        open($tail,$config->{tosignal}) or next;
+        $inode = (stat($cfg->{signal}->{infile}))[1];
+        open($tail,$cfg->{signal}->{infile}) or next;
     } else {
         # SEEK_CUR
         seek($tail, 0, 1);
     }
 
     # send new messages to signal group
-    my $lines = do { local $/; <$tail> };
-    if ($lines) {
-        open my $sc, "|-", $config->{signal_cli}, "-u", $config->{signal_phone}, "send", "-g", $config->{signal_gid};
-        print $sc $lines;
+    my $telsend ='';
+    while (my $line = <$tail>) {
+        if ($line =~ /^FILE:/) {
+            # send photo's, documents
+            $line = substr $line,5;
+            my ($file,$caption) = split / /, $line, 2; 
+            qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -g $cfg->{signal}->{gid} -m "$caption" -a $cfg->{telegram}->{attachments}/$file );
+        } else {
+            $telsend .= $line."\n";
+        }
+    }
+    if ($telsend) {
+        open my $sc, "|-", $cfg->{signal}->{cli}, "-u", $cfg->{signal}->{phone}, "send", "-g", $cfg->{signal}->{gid};
+        print $sc $telsend;
         close $sc;
     }
 
     # now poll the signal group for new messages
     my $json = JSON->new->allow_nonref;
-    my @lines = qx( $config->{signal_cli} -u $config->{signal_phone} receive --json );
+    my @lines = qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} receive --json );
     for my $line (@lines) {
-        print $debug $line if defined $config->{signal_debug};
+        print $debug $line if defined $cfg->{signal}->{debug};
         print $line; chomp $line;
         my $sigmsg = $json->decode($line);
         next unless defined $sigmsg->{envelope}->{dataMessage};
@@ -61,35 +74,36 @@ for (;;) {
         my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
         my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
         my $text = (defined $datamsg->{message}) ? $datamsg->{message} : "";
+        my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
 
         # anonymize sender telephone
         my $anonsender = $sender;
-        if (defined $config->{nicks}->{$sender}) {
-            $anonsender = $config->{nicks}->{$sender};
+        if (defined $cfg->{nicks}->{$sender}) {
+            $anonsender = $cfg->{nicks}->{$sender};
         } else {
             $anonsender =~ s/.*(\d\d\d\d)$/Piraat-$1/;
-            nickhelp($config,$sender,$anonsender);
-            setalias($config,$sender,$anonsender);
+            nickhelp($cfg,$sender,$anonsender);
+            setalias($cfg,$sender,$anonsender);
         }
 
         # check for setnick command
         if ($text =~ /^!setnick/) {
             (my $nick = $text) =~ s/^!setnick ([\w]+).*$/$1/;
             if ($nick) {
-                setalias($config,$sender,$nick);
-                $config->{nicks}->{$sender} = $nick;
+                setalias($cfg,$sender,$nick);
+                $cfg->{nicks}->{$sender} = $nick;
                 $text = "$anonsender is now known as $nick\n";
 
                 # notify all chats
-                open my $w, ">>", $config->{tosignal} or die "Died opening tosignal $config->{tosignal}";
+                open my $w, ">>", $cfg->{signal}->{infile} or die "Died opening file $cfg->{signal}->{infile}";
                 print $w "$text";
                 close $w;
 
-                open $w, ">>", $config->{sigfile} or die "Died opening sigfile $config->{sigfile}";
+                open $w, ">>", $cfg->{signal}->{file} or die "Died opening sigfile $cfg->{signal}->{file}";
                 print $w "[Sg] $text";
                 close $w;
 
-                my $URL = "https://api.telegram.org/bot$config->{token}/sendMessage?chat_id=$config->{chat_id}&text=";
+                my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
                 my $telmsg = uri_escape("[Sg] $text");
                 my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
                 print "$response->{status} $response->{reason}\n";
@@ -99,10 +113,10 @@ for (;;) {
         }
 
         # only relay group messages
-        next unless $group eq $config->{signal_gid};
+        next unless $group eq $cfg->{signal}->{gid};
 
         # relay to telegram
-        my $URL = "https://api.telegram.org/bot$config->{token}/sendMessage?chat_id=$config->{chat_id}&text=";
+        my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
         my $telmsg = uri_escape_utf8("[Sg $anonsender]: $text");
         my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
         print "$response->{status} $response->{reason}\n";
@@ -110,17 +124,39 @@ for (;;) {
         # relay to IRC
         $text = unidecode($text);
         my @lines = split /\n/, $text;
-        open my $w, ">>", $config->{sigfile} or die "Died opening sigfile $config->{sigfile}";
+        open my $w, ">>", $cfg->{signal}->{file} or die "Died opening sigfile $cfg->{signal}->{file}";
         foreach my $line (@lines) {
             print $w "[Sg $anonsender]: $line\n" if $line;
+        }
+
+        # relay optional attachments
+        foreach my $att (@$attach) {
+            (my $ext = $att->{contentType}) =~ s#.*/##;
+            my ($msg, $URL, $type);
+            my $ua = LWP::UserAgent->new;
+            rename "$cfg->{signal}->{attachments}/$att->{id}", "$cfg->{signal}->{attachments}/$att->{id}.$ext";
+            if ($att->{contentType} =~ /image/) {
+                $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendPhoto";
+                $type = 'photo';
+                $msg = "[Sg $anonsender]** sends an image: $cfg->{signal}->{url}/$att->{id}.$ext\n";
+            } else {
+                $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendDocument";
+                $type = 'document';
+                $msg = "[Sg $anonsender]** sends a document: $cfg->{signal}->{url}/$att->{id}.$ext\n";
+            }
+            $ua->post($URL, Content_Type => 'form-data',
+                                 Content => { $type => ["$cfg->{signal}->{attachments}/$att->{id}.$ext"],
+                                              chat_id => $cfg->{telegram}->{chat_id},
+                                              caption => "[Sg $ext $type send by $anonsender]"},);
+            print $w $msg;
         }
     }
 }
 
 sub getalias {
-    my $config = shift;
+    my $cfg = shift;
     my $alias;
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$config->{signal_db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{signal}->{db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
     my $obj = $dbh->prepare("select * from alias");
     $obj->execute() or die $DBI::errstr;
 
@@ -131,16 +167,16 @@ sub getalias {
 }
 
 sub setalias {
-    my ($config,$phone,$nick) = @_;
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$config->{signal_db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
+    my ($cfg,$phone,$nick) = @_;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{signal}->{db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
     $dbh->do("insert or replace into alias (phone,nick) values (?,?)", undef, $phone, $nick) or die $DBI::errstr;
     $dbh->disconnect();
 }
 
 sub nickhelp {
-    my ($config,$phone,$nick) = @_;
-    my $text = 'You do not have a nickname set. You are now known as '.$nick.'. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
-    my $out = qx( $config->{signal_cli} -u $config->{signal_phone} send -m "$text" $phone );
-    print $debug $out if defined $config->{signal_debug};
+    my ($cfg,$phone,$nick) = @_;
+    my $text = 'You do not have a nickname set. You are now known as '.$nick;
+    $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
+    my $out = qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -m "$text" $phone );
+    print $debug $out if defined $cfg->{signal}->{debug};
 }
-

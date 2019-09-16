@@ -11,54 +11,80 @@
 
 use strict;
 use CGI qw/:standard/;
+use HTTP::Tiny;
 use JSON;
 use Text::Unidecode;
 
-my $cfg = "/etc/hermod.json";
-open my $fh, '<', $cfg or die "error opening $cfg $!";
-my $config = decode_json do { local $/; <$fh> };
-die "No usable config found!\nHint: look at hermod.json.example\n" unless ref $config eq "HASH";
+open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
+my $cfg = decode_json do { local $/; <$fh> };
 
 my $ok = '{"ok":true,"result":true}';
 
 # communicate with bot through a logfile
-open my $irc, '>>:utf8', $config->{telfile};
-open my $sig, '>>', $config->{tosignal};
-open my $dbg, '>>', $config->{telegram_debug} if defined $config->{telegram_debug};
+open my $irc, '>>:utf8', $cfg->{telegram}->{file} or die "error opening $cfg->{telegram}->{file}\n";
+open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
+open my $dbg, '>>', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
 my $cgi    = CGI->new;
 my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
 my $dj = decode_json( $body );
 
-print $dbg "$body\n" if defined $config->{telegram_debug};
+print $dbg "$body\n" if defined $cfg->{telegram}->{debug};
 
 # check type of msg and chat_id
 finish("no chat id\n") unless defined $dj->{'message'}->{'chat'}->{'id'};
-finish("wrong chat id\n") unless $dj->{'message'}->{'chat'}->{'id'} == $config->{chat_id};
+finish("wrong chat id\n") unless $dj->{'message'}->{'chat'}->{'id'} == $cfg->{telegram}->{chat_id};
 
 my $user_id = (defined $dj->{'message'}->{'from'}->{'id'} and $dj->{'message'}->{'from'}->{'id'} =~ /^\d+$/) ?
     $dj->{'message'}->{'from'}->{'id'} : 0;
 my $text = (defined $dj->{'message'}->{'text'}) ? $dj->{'message'}->{'text'} : "";
 my $first = (defined $dj->{'message'}->{'from'}->{'first_name'}) ? $dj->{'message'}->{'from'}->{'first_name'} : "";
 my $last = (defined $dj->{'message'}->{'from'}->{'last_name'}) ? $dj->{'message'}->{'from'}->{'last_name'} : "";
+my $caption = (defined $dj->{'message'}->{'caption'}) ? $dj->{'message'}->{'caption'} : "";
 
-$text .= "\nsends a photo" if defined $dj->{'message'}->{'photo'};
+my ($type,$doc);
+if (defined $dj->{'message'}->{'photo'}) {
+    $doc = @{$dj->{'message'}->{'photo'}}[-1];
+    $type = 'photo';
+}
+if (defined $dj->{'message'}->{'document'}) {
+    $doc = $dj->{'message'}->{'document'};
+    $type = 'document';
+}
+if (defined $doc->{file_id}) {
+    my $response = HTTP::Tiny->new->get( "https://api.telegram.org/bot$cfg->{telegram}->{token}/getFile?file_id=$doc->{file_id}" );
+    if ($response->{success}) {
+        my $djfile = decode_json( $response->{content} );
+        my $path = $djfile->{result}->{file_path};
+        (my $file = $path) =~ s#.*/##;
+        my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
+        qx( wget -O $cfg->{telegram}->{attachments}/$file https://api.telegram.org/file/bot$cfg->{telegram}->{token}/$path >/dev/null 2>&1 );
+        if ($? == 0) {
+            print $sig "FILE:$file [send by $first $last on telegram] $caption\n";
+            $text .= "\n** sends a $type: $cfg->{telegram}->{url}/$file";
+        $text .= " with caption: $caption" if $caption;
+        } else {
+            print $dbg "Error getting $type $name $file\n";
+        }
+    }
+}
+
 $text .= "\nsends a sticker" if defined $dj->{'message'}->{'sticker'};
 
 # split lines and write to logs for signal and irc
 my @lines = split /\n/, $text;
 foreach my $line (@lines) {
-    print $sig "[Tg $first $last]: $line\n" if $line;
+    next unless $line;
     print $irc unidecode("[Tg $first $last]: $line\n");
+    next if $line =~ /^\*\* sends a /;
+    print $sig "[Tg $first $last]: $line\n";
 }
 
-finish("Message relayed\n");
+finish("Relayed messages\n");
 
 sub finish {
-    print $dbg shift if defined $config->{telegram_debug};
+    print $dbg shift if defined $cfg->{telegram}->{debug};
     print $cgi->header(-type => 'application/json', -connection => 'close');
     print $ok."\n\n";
     exit();
 }
-
-
