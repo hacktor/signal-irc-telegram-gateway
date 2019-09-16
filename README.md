@@ -5,7 +5,7 @@ often considered the messenger of the gods
 
 These scripts act as a gateway between a telegram group a signal group and an irc channel.
 The first thing to do is to register a telegram bot with the **botfather**.
-Then you can add the bot to the telegram channel you want to share with IRC.
+Then you can add the bot to the admins of the telegram channel you want to share with IRC. 
 Note the telegram API token and find the telegram group chat\_id.
 
 Reference: [Telegram Bot API](https://core.telegram.org/bots/api "Bot API")
@@ -48,20 +48,20 @@ appropriately
 ```
 signal-\>phone is the phone number used by signal-cli. It has to be added to the group (signal-\>gid). signal-\>anon is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with signal-cli
 
-token, chat\_id and group relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
+token and chat\_id relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
 for details. 
 
-ircnode, channel, port, nick and password relate to... IRC. Any value for UseSSL other than 0 will cause the connection to be SSL enabled.
+**irc-\>node**, **irc-\>channel**, **irc-\>port**, **irc-\>nick** and **irc-\>password** relate to... IRC. Any value for **irc-\>UseSSL** other than 0 will cause the connection to be SSL enabled.
 
-telfile is the connection between the telegram webhook and the IRC bot. Can be any file, as long as it is writeable by the webhook and readable by the bot.
+**telegram-\>file** is the connection between the telegram webhook and the IRC bot. Can be any file, as long as it is writeable by the webhook and readable by the bot.
 
-sigfile is the connection between the signal poller and the IRC bot. Should be writeable by the poller and readable by the bot
+**signal-\>file** is the connection between the signal poller and the IRC bot. Should be writeable by the poller and readable by the bot
 
-tosignal is the reverse of sigfile. the IRC bot writes to this file while the poller will read it and send new content to the signal group
+**signal-\>infile** is the reverse of **signal-\>file**. the IRC bot writes to this file while the poller will read it and send new content to the signal group
 
 ## Setting up the hook
 
-The gateway consists of two parts: a daemon part and a webhook. Place the
+The gateway consists of three parts: two daemon parts and a webhook. Place the
 webhook in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
 
 Next thing is to register the webhook:
@@ -70,7 +70,7 @@ Next thing is to register the webhook:
 curl -F "url=https://webserver/cgi-bin/telegramhook" https://api.telegram.org/bot$TOKEN/setWebhook
 ```
 
-Make sure the telegram bot you are using has privacy mode disabled (or is admin in the telegram group). If not, the bot won't see any group messages by other users.
+Make sure the telegram bot you are using has privacy mode disabled (or is admin in the telegram group). If not, the bot won't see any group messages by other users. You can review the **telegram-\>debug** file to get the chat\_id of the telegram group.
 
 ## Setting up Signal
 
@@ -134,4 +134,3 @@ that's all. You will see messages scrolling showing the login proces on IRC. You
 @reboot screen -S hermod -d -m python /home/hermod/bin/hermod.py
 @reboot screen -S poller -d -m /home/hermod/bin/signalpoller
 ```
-
