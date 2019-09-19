@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 #
-# IRC Bot for Hermod Telegram Gateway. Works with telegramhook for receiving
-# messages from a telegram group.
+# IRC Bot for Hermod Telegram Gateway. Reads from a logfile to be send to irc and relays
+# messages from irc to telegram and to another logfile which is send to a signal group
+# by signalpoller.
 #
 # 2019, Ruben de Groot
 
@@ -38,9 +39,7 @@ POE::Session->create(
 $poe_kernel->run();
 
 sub _start {
-    #my $heap = $_[HEAP];
-    ## retrieve our component's object from the heap where we stashed it
-    #my $irc = $heap->{irc};
+    # file to be read and send to the channel
     $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
         filename => $config->{irc}->{infile},
     ));
@@ -62,8 +61,6 @@ sub irc_001 {
 sub irc_public {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
-    my @data;
-    my $coin = '';
 
     # we relay all messages straight to telegram
     my $text = uri_escape("[IRC] $nick: $what");
@@ -84,7 +81,7 @@ sub irc_tail_input {
     return;
 }
 
-# We registered for all events, this will produce some debug info.
+# This will produce some debug info.
 sub _default {
     my ($event, $args) = @_[ARG0 .. $#_];
     my @output = ( "$event: " );
