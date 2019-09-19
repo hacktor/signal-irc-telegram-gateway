@@ -20,7 +20,6 @@ appropriately
         "phone": "+316xxxxxxxxxx",
         "gid": "XXXXXXXXXXXXXXXXXXXXX==",
         "cli": "/home/hermod/bin/signal-cli",
-        "file": "/home/hermod/log/signal.log",
         "infile": "/home/hermod/log/tosignal.log",
         "db": "/home/hermod/var/signal.db",
         "debug": "/home/hermod/log/signal.debug",
