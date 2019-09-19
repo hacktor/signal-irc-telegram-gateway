@@ -46,18 +46,15 @@ appropriately
     }
 }
 ```
-signal-\>phone is the phone number used by signal-cli. It has to be added to the group (signal-\>gid). signal-\>anon is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with signal-cli
+**signal-\>phone** is the phone number used by signal-cli. It has to be added to the group (**signal-\>gid**). **signal-\>anon** is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with **signal-cli**
 
-token and chat\_id relate to telegram. Refer to the [Telegram Bot API](https://core.telegram.org/bots/api)
-for details. 
+Refer to the [Telegram Bot API](https://core.telegram.org/bots/api) for details about **telegram-\>token** and **telegram-\>chat\_id**
 
 **irc-\>node**, **irc-\>channel**, **irc-\>port**, **irc-\>nick** and **irc-\>password** relate to... IRC. Any value for **irc-\>UseSSL** other than 0 will cause the connection to be SSL enabled.
 
-**telegram-\>file** is the connection between the telegram webhook and the IRC bot. Can be any file, as long as it is writeable by the webhook and readable by the bot.
+**irc-\>infile** is the connection between the telegram webhook, the signalpoller and the IRC bot. Can be any file, as long as it is writeable by the webhook and signalpoller and readable by the bot.
 
-**signal-\>file** is the connection between the signal poller and the IRC bot. Should be writeable by the poller and readable by the bot
-
-**signal-\>infile** is the reverse of **signal-\>file**. the IRC bot writes to this file while the poller will read it and send new content to the signal group
+The IRC bot and the webhook write to **signal-\>infile**. The poller will read it and send new content to the signal group
 
 ## Setting up the hook
 
@@ -118,7 +115,7 @@ The signal-cli program by default saves all attachments in a directory **~/.loca
 Verify the bot will be receiving messages in the telegram group by checking the **telegram->file**. Then you can start the IRC part:
 
 ```bash
-$ python hermod.py 
+$ ./hermod
 Establishing connection to [irc.freenode.net]
 :weber.freenode.net NOTICE * :*** Looking up your hostname...
 :weber.freenode.net NOTICE * :*** Checking Ident
@@ -131,6 +128,6 @@ Establishing connection to [irc.freenode.net]
 ```
 that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
 ```bash
-@reboot screen -S hermod -d -m python /home/hermod/bin/hermod.py
+@reboot screen -S hermod -d -m /home/hermod/bin/hermod
 @reboot screen -S poller -d -m /home/hermod/bin/signalpoller
 ```

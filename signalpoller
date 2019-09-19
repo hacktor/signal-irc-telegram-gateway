@@ -99,7 +99,7 @@ for (;;) {
                 print $w "$text";
                 close $w;
 
-                open $w, ">>", $cfg->{signal}->{file} or die "Died opening sigfile $cfg->{signal}->{file}";
+                open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{signal}->{file}";
                 print $w "[Sg] $text";
                 close $w;
 
@@ -112,22 +112,26 @@ for (;;) {
             }
         }
 
-        # only relay group messages
+        # only relay group messages with contents
         next unless $group eq $cfg->{signal}->{gid};
+        next unless $text;
 
         # relay to telegram
+        my $telmsg;
         my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
-        my $telmsg = uri_escape_utf8("[Sg $anonsender]: $text");
+        eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
+        $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
         my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
         print "$response->{status} $response->{reason}\n";
 
         # relay to IRC
-        $text = unidecode($text);
+        #$text = unidecode($text);
         my @lines = split /\n/, $text;
-        open my $w, ">>", $cfg->{signal}->{file} or die "Died opening sigfile $cfg->{signal}->{file}";
+        open my $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
         foreach my $line (@lines) {
-            print $w "[Sg $anonsender]: $line\n" if $line;
+            print $w "[Sg] $anonsender: $line\n" if $line;
         }
+        close $w;
 
         # relay optional attachments
         foreach my $att (@$attach) {
@@ -138,18 +142,21 @@ for (;;) {
             if ($att->{contentType} =~ /image/) {
                 $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendPhoto";
                 $type = 'photo';
-                $msg = "[Sg $anonsender]** sends an image: $cfg->{signal}->{url}/$att->{id}.$ext\n";
+                $msg = "[Sg] **$anonsender sends an image: $cfg->{signal}->{url}/$att->{id}.$ext\n";
             } else {
                 $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendDocument";
                 $type = 'document';
-                $msg = "[Sg $anonsender]** sends a document: $cfg->{signal}->{url}/$att->{id}.$ext\n";
+                $msg = "[Sg] **$anonsender sends a document: $cfg->{signal}->{url}/$att->{id}.$ext\n";
             }
             $ua->post($URL, Content_Type => 'form-data',
                                  Content => { $type => ["$cfg->{signal}->{attachments}/$att->{id}.$ext"],
                                               chat_id => $cfg->{telegram}->{chat_id},
                                               caption => "[Sg $ext $type send by $anonsender]"},);
+            open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
             print $w $msg;
+            close $w;
         }
+        close $w;
     }
 }
 

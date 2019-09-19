@@ -21,8 +21,8 @@ my $cfg = decode_json do { local $/; <$fh> };
 my $ok = '{"ok":true,"result":true}';
 
 # communicate with bot through a logfile
-open my $irc, '>>:utf8', $cfg->{telegram}->{file} or die "error opening $cfg->{telegram}->{file}\n";
-open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
+open my $irc, '>>', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
+open my $sig, '>>', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
 open my $dbg, '>>', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
 my $cgi    = CGI->new;
@@ -61,8 +61,8 @@ if (defined $doc->{file_id}) {
         qx( wget -O $cfg->{telegram}->{attachments}/$file https://api.telegram.org/file/bot$cfg->{telegram}->{token}/$path >/dev/null 2>&1 );
         if ($? == 0) {
             print $sig "FILE:$file [send by $first $last on telegram] $caption\n";
-            $text .= "\n** sends a $type: $cfg->{telegram}->{url}/$file";
-        $text .= " with caption: $caption" if $caption;
+            $text = "** sends a $type: $cfg->{telegram}->{url}/$file";
+            $text .= " with caption: $caption" if $caption;
         } else {
             print $dbg "Error getting $type $name $file\n";
         }
@@ -75,9 +75,10 @@ $text .= "\nsends a sticker" if defined $dj->{'message'}->{'sticker'};
 my @lines = split /\n/, $text;
 foreach my $line (@lines) {
     next unless $line;
-    print $irc unidecode("[Tg $first $last]: $line\n");
-    next if $line =~ /^\*\* sends a /;
-    print $sig "[Tg $first $last]: $line\n";
+    #print $irc unidecode("[Tg] $first $last: $line\n");
+    print $irc "[Tg] $first $last: $line\n";
+    next if $line =~ /\*\* sends a /;
+    print $sig "[Tg] $first $last: $line\n";
 }
 
 finish("Relayed messages\n");
