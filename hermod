@@ -63,12 +63,12 @@ sub irc_public {
     my $nick = ( split /!/, $who )[0];
 
     # we relay all messages straight to telegram
-    my $text = uri_escape("[IRC] $nick: $what");
+    my $text = uri_escape_utf8("[IRC] $nick: $what");
     my $data = "chat_id=$config->{telegram}->{chat_id}&text=$text";
     HTTP::Tiny->new->get( "$URL?$data" );
 
     # we write to the signal infile
-    open my $w, ">>", $config->{signal}->{infile};
+    open my $w, ">>:utf8", $config->{signal}->{infile};
     print $w "[IRC] $nick: $what\n";
     close $w;
 

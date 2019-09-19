@@ -21,9 +21,9 @@ my $cfg = decode_json do { local $/; <$fh> };
 my $ok = '{"ok":true,"result":true}';
 
 # communicate with bot through a logfile
-open my $irc, '>>', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
-open my $sig, '>>', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
-open my $dbg, '>>', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
+open my $irc, '>>:utf8', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
+open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
+open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
 my $cgi    = CGI->new;
 my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';

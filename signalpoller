@@ -104,7 +104,7 @@ for (;;) {
                 close $w;
 
                 my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
-                my $telmsg = uri_escape("[Sg] $text");
+                my $telmsg = uri_escape_utf8("[Sg] $text");
                 my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
                 print "$response->{status} $response->{reason}\n";
 
@@ -114,7 +114,7 @@ for (;;) {
 
         # only relay group messages with contents
         next unless $group eq $cfg->{signal}->{gid};
-        next unless $text;
+        next unless $text or $attach;
 
         # relay to telegram
         my $telmsg;
