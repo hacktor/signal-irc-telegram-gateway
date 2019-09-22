@@ -17,16 +17,16 @@ my $cfg = "/etc/hermod.json";
 open my $fh, '<', $cfg or die "error opening $cfg $!";
 my $config = decode_json do { local $/; <$fh> };
 
-my $ircname  = 'Hermod Gateway';
 my $URL = "https://api.telegram.org/bot$config->{telegram}->{token}/sendMessage";
 
 # We create a new PoCo-IRC object
 my $irc = POE::Component::IRC->spawn(
-   nick    => $config->{irc}->{nick},
-   ircname => $ircname,
-   server  => $config->{irc}->{node},
-   Port    => $config->{irc}->{port},
-   UseSSL  => $config->{irc}->{UseSSL},
+   nick     => $config->{irc}->{nick},
+   ircname  => $config->{irc}->{ircname},
+   username => $config->{irc}->{ident},
+   server   => $config->{irc}->{node},
+   Port     => $config->{irc}->{port},
+   UseSSL   => $config->{irc}->{UseSSL},
 ) or die "Oh noooo! $!";
 
 POE::Session->create(

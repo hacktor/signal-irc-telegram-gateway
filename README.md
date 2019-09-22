@@ -36,12 +36,16 @@ appropriately
         "url": "https://hermod.example.com/telegram"
     },  
     "irc": {
-        "ircnode": "irc.freenode.net",
+        "node": "irc.freenode.net",
         "channel": "#channel",
-        "port"   : 6697,
-        "UseSSL" : 1,
-        "nick"   : "gateway",
+        "nick": "gateway",
         "password": "xxxxxxxx",
+        "ident": "hermod",
+        "ircname": "Hermod Gateway",
+        "port": 6697,
+        "UseSSL": 1,
+        "infile": "/var/www/log/toirc.log",
+        "debug": "/var/www/log/irc.debug"
     }
 }
 ```
