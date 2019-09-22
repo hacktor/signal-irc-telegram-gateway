@@ -51,7 +51,7 @@ for (;;) {
             my ($file,$caption) = split / /, $line, 2; 
             qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -g $cfg->{signal}->{gid} -m "$caption" -a $cfg->{telegram}->{attachments}/$file );
         } else {
-            $telsend .= $line."\n";
+            $telsend .= $line;
         }
     }
     if ($telsend) {
@@ -119,10 +119,12 @@ for (;;) {
         # relay to telegram
         my $telmsg;
         my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
-        eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
-        $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
-        my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
-        print "$response->{status} $response->{reason}\n";
+        if ($text) {
+            eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
+            $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
+            my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
+            print "$response->{status} $response->{reason}\n";
+        }
 
         # relay to IRC
         #$text = unidecode($text);
