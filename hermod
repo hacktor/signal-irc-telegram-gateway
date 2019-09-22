@@ -31,7 +31,7 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public irc_tail_input ) ],
+        main => [ qw(_default _start irc_001 irc_public irc_join irc_quit irc_tail_input ) ],
     ],
     heap => { irc => $irc },
 );
@@ -61,18 +61,22 @@ sub irc_001 {
 sub irc_public {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
+    my $text = "[IRC] $nick: $what\n";
+    relay($text);
+}
 
-    # we relay all messages straight to telegram
-    my $text = uri_escape_utf8("[IRC] $nick: $what");
-    my $data = "chat_id=$config->{telegram}->{chat_id}&text=$text";
-    HTTP::Tiny->new->get( "$URL?$data" );
+sub irc_join {
+    my ($who,$channel) = @_[ARG0, ARG1];
+    my $nick = ( split /!/, $who )[0];
+    my $text = "[IRC] $nick joined the chat\n";
+    relay($text) if defined $config->{irc}->{showjoin};
+}
 
-    # we write to the signal infile
-    open my $w, ">>:utf8", $config->{signal}->{infile};
-    print $w "[IRC] $nick: $what\n";
-    close $w;
-
-    return;
+sub irc_quit {
+    my ($who,$msg) = @_[ARG0, ARG1];
+    my $nick = ( split /!/, $who )[0];
+    my $text = "[IRC] $nick quit the chat ($msg)\n";
+    relay($text) if defined $config->{irc}->{showquit};
 }
 
 sub irc_tail_input {
@@ -96,5 +100,20 @@ sub _default {
     }
     print join ' ', @output, "\n";
     die "I got disconnected :( :(\nKilling myself..\n" if grep(/irc_disconnect/,@output);
+    return;
+}
+
+sub relay {
+    my $text = shift;
+
+    # we relay straight to telegram
+    my $data = "chat_id=$config->{telegram}->{chat_id}&text=" . uri_escape($text);
+    HTTP::Tiny->new->get( "$URL?$data" );
+
+    # we write to the signal infile
+    open my $w, ">>", $config->{signal}->{infile};
+    print $w $text;
+    close $w;
+
     return;
 }
