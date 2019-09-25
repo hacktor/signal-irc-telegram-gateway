@@ -106,10 +106,11 @@ for (@lines) {
 
     # for IRC, split in chunks of maxmsg size if necessary 
     if (defined $cfg->{irc}->{maxmsg} and length $msg > $cfg->{irc}->{maxmsg}) {
-        while (my $chunk = substr $msg, 0, $cfg->{irc}->{maxmsg}) {
+        my $ircmsg = $msg;
+        while (my $chunk = substr $ircmsg, 0, $cfg->{irc}->{maxmsg}) {
             print $irc "$chunk\n";
-            last if length $msg <= $cfg->{irc}->{maxmsg};
-            $msg = "[Tg] $first $last: " . substr $msg, $cfg->{irc}->{maxmsg};
+            last if length $ircmsg <= $cfg->{irc}->{maxmsg};
+            $ircmsg = "[Tg] $first $last: " . substr $ircmsg, $cfg->{irc}->{maxmsg};
         }
     } else {
         print $irc $msg;
