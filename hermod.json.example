@@ -3,12 +3,11 @@
         "phone": "+316xxxxxxxxxx",
         "gid": "XXXXXXXXXXXXXXXXXXXXX==",
         "cli": "/home/hermod/bin/signal-cli",
-        "file": "/home/hermod/log/signal.log",
         "infile": "/home/hermod/log/tosignal.log",
         "db": "/home/hermod/var/signal.db",
         "debug": "/home/hermod/log/signal.debug",
         "anon": "Anonymous",
-        "attachment_path": "/var/www/html/signal",
+        "attachments": "/var/www/html/signal",
         "url": "https://hermod.example.com/signal"
     },
     "telegram": {
@@ -28,7 +27,8 @@
         "ircname": "Hermod Gateway",
         "port": 6697,
         "UseSSL": 1,
-         "infile": "/var/www/log/toirc.log",
+        "maxmsg": 400,
+        "infile": "/var/www/log/toirc.log",
         "debug": "/var/www/log/irc.debug"
     }
 }

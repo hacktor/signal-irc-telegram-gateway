@@ -74,7 +74,7 @@ if (defined $doc->{file_id}) {
 $text .= "\nsends a sticker" if defined $dj->{message}->{sticker};
 
 # is the message a reply?
-$text = "(reply to: $dj->{message}->{reply_to_message}->{text}): " . $text if defined $dj->{message}->{reply_to_message} and
+$text = "(reply to: $dj->{message}->{reply_to_message}->{text}) " . $text if defined $dj->{message}->{reply_to_message} and
     $dj->{message}->{reply_to_message}->{text};
 
 # look for new chat members
@@ -100,12 +100,23 @@ if (defined $dj->{message}->{left_chat_member}) {
 
 # split lines and write to logs for signal and irc
 my @lines = split /\n/, $text;
-foreach my $line (@lines) {
-    next unless $line;
-    #print $irc unidecode("[Tg] $first $last: $line\n");
-    print $irc "[Tg] $first $last: $line\n";
-    next if $line =~ /\*\* sends a /;
-    print $sig "[Tg] $first $last: $line\n";
+for (@lines) {
+    next unless $_;
+    my $msg = "[Tg] $first $last: $_\n";
+
+    # for IRC, split in chunks of maxmsg size if necessary 
+    if (defined $cfg->{irc}->{maxmsg} and length $msg > $cfg->{irc}->{maxmsg}) {
+        while (my $chunk = substr $msg, 0, $cfg->{irc}->{maxmsg}) {
+            print $irc "$chunk\n";
+            last if length $msg <= $cfg->{irc}->{maxmsg};
+            $msg = "[Tg] $first $last: " . substr $msg, $cfg->{irc}->{maxmsg};
+        }
+    } else {
+        print $irc $msg;
+    }
+    # skip documents, photo's. they've been send already.
+    next if $msg =~ /\*\* sends a /;
+    print $sig $msg;
 }
 
 finish("Relayed messages\n");

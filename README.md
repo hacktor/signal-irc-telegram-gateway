@@ -44,6 +44,7 @@ appropriately
         "ircname": "Hermod Gateway",
         "port": 6697,
         "UseSSL": 1,
+        "maxmsg": 400,
         "infile": "/var/www/log/toirc.log",
         "debug": "/var/www/log/irc.debug"
     }
@@ -53,7 +54,7 @@ appropriately
 
 Refer to the [Telegram Bot API](https://core.telegram.org/bots/api) for details about **telegram-\>token** and **telegram-\>chat\_id**
 
-**irc-\>node**, **irc-\>channel**, **irc-\>port**, **irc-\>nick** and **irc-\>password** relate to... IRC. Any value for **irc-\>UseSSL** other than 0 will cause the connection to be SSL enabled.
+**irc-\>node**, **irc-\>channel**, **irc-\>port**, **irc-\>nick** and **irc-\>password** relate to... IRC. Any value for **irc-\>UseSSL** other than 0 will cause the connection to be SSL enabled. Setting **irc-\>maxmsg** will break messages from telegram into chunks of **maxmsg** size.
 
 **irc-\>infile** is the connection between the telegram webhook, the signalpoller and the IRC bot. Can be any file, as long as it is writeable by the webhook and signalpoller and readable by the bot.
 
