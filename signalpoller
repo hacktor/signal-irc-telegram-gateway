@@ -11,10 +11,8 @@
 use strict;
 use JSON;
 use HTTP::Tiny;
-use HTTP::Request::Common;
 use LWP::UserAgent;
 use URI::Escape;
-use Text::Unidecode;
 use DBI;
 
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
@@ -43,7 +41,7 @@ for (;;) {
     }
 
     # send new messages to signal group
-    my $telsend ='';
+    my $msg ='';
     while (my $line = <$tail>) {
         if ($line =~ /^FILE:/) {
             # send photo's, documents
@@ -51,12 +49,12 @@ for (;;) {
             my ($file,$caption) = split / /, $line, 2; 
             qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -g $cfg->{signal}->{gid} -m "$caption" -a $cfg->{telegram}->{attachments}/$file );
         } else {
-            $telsend .= $line;
+            $msg .= $line."\n";
         }
     }
-    if ($telsend) {
+    if ($msg) {
         open my $sc, "|-", $cfg->{signal}->{cli}, "-u", $cfg->{signal}->{phone}, "send", "-g", $cfg->{signal}->{gid};
-        print $sc $telsend;
+        print $sc $msg;
         close $sc;
     }
 
@@ -82,6 +80,7 @@ for (;;) {
             $anonsender = $cfg->{nicks}->{$sender};
         } else {
             $anonsender =~ s/.*(\d\d\d\d)$/Piraat-$1/;
+            $cfg->{nicks}->{$sender} = $anonsender;
             nickhelp($cfg,$sender,$anonsender);
             setalias($cfg,$sender,$anonsender);
         }
@@ -127,13 +126,25 @@ for (;;) {
         }
 
         # relay to IRC
-        #$text = unidecode($text);
         my @lines = split /\n/, $text;
-        open my $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
-        foreach my $line (@lines) {
-            print $w "[Sg] $anonsender: $line\n" if $line;
+        open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+        for (@lines) {
+            next unless $_;
+            my $msg = "[Sg] $anonsender: $_\n";
+
+            # for IRC, split in chunks of maxmsg size if necessary 
+            if (defined $cfg->{irc}->{maxmsg} and length $msg > $cfg->{irc}->{maxmsg}) {
+                my $ircmsg = $msg;
+                while (my $chunk = substr $ircmsg, 0, $cfg->{irc}->{maxmsg}) {
+                    print $irc "$chunk\n";
+                    last if length $ircmsg <= $cfg->{irc}->{maxmsg};
+                    $ircmsg = "[Sg] $anonsender: " . substr $ircmsg, $cfg->{irc}->{maxmsg};
+                }
+            } else {
+                print $irc $msg;
+            }
         }
-        close $w;
+        close $irc;
 
         # relay optional attachments
         foreach my $att (@$attach) {
@@ -154,11 +165,10 @@ for (;;) {
                                  Content => { $type => ["$cfg->{signal}->{attachments}/$att->{id}.$ext"],
                                               chat_id => $cfg->{telegram}->{chat_id},
                                               caption => "[Sg $ext $type send by $anonsender]"},);
-            open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
-            print $w $msg;
-            close $w;
+            open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+            print $irc $msg;
+            close $irc;
         }
-        close $w;
     }
 }
 
