@@ -24,7 +24,7 @@ appropriately
         "db": "/home/hermod/var/signal.db",
         "debug": "/home/hermod/log/signal.debug",
         "anon": "Anonymous",
-        "attachment_path": "/var/www/html/signal",
+        "attachments": "/var/www/html/signal",
         "url": "https://hermod.example.com/signal"
     },  
     "telegram": {
@@ -71,7 +71,7 @@ Next thing is to register the webhook:
 curl -F "url=https://webserver/cgi-bin/telegramhook" https://api.telegram.org/bot$TOKEN/setWebhook
 ```
 
-Make sure the telegram bot you are using has privacy mode disabled (or is admin in the telegram group). If not, the bot won't see any group messages by other users. You can review the **telegram-\>debug** file to get the chat\_id of the telegram group.
+Make sure the telegram bot you are using has privacy mode disabled. If not, the bot won't see any group messages by other users. You can review the **telegram-\>debug** file to get the chat\_id of the telegram group.
 
 ## Setting up Signal
 
@@ -84,13 +84,14 @@ $ signal-cli -u +316xxxxxxxxxx verify XXX-XXX
 ```
 The XXX-XXX code you wil get in an SMS text message so you'll have to actually install the simcard in some telephone. This is the only time it's needed.
 
-Next is to add a phone number you control into a signal group. You can start **signalpoller** and 
+Set **signal**->**phone** to the number you just registered with **signal-cli**
+Next is to add the phone number into a signal group. You can then start **signalpoller** and 
 look at its output; when something is said in the signal group you will see output like this:
 
 ```text
 {"envelope":{"source":"+316xxxxxxxx","sourceDevice":1,"relay":null,"timestamp":1566735523785,"isReceipt":false,"dataMessage":{"timestamp":1566735523785,"message":"Hello","expiresInSeconds":3600,"attachments":[],"groupInfo":{"groupId":"XXXXXXXXXXXXXXXXXXXXXX==","members":null,"name":null,"type":"DELIVER"}},"syncMessage":null,"callMessage":null}}
 ```
-Update **signal**->**gid** in hermod.json  with the **groupId** in this output. Set **signal**->**phone** to the number you registered with **signal-cli**
+Update **signal**->**gid** in hermod.json  with the **groupId** in this output.
 
 The signal poller does not see usernames, only telephone numbers. It would be kind of rude to relay these telephone numbers to Telegram or IRC, so the telephone numbers are anonymized as "Anonymous-XXXX", where XXXX are the last 4 numbers of the telephone number.
 
@@ -110,13 +111,13 @@ create table alias (phone text unique not null, nick text);
 ```
 ## Directories for attachments and urls
 
-The photo's and attachments send by people in telegram and signal groups are downloaded and placed in suitable directories. For Telegram, use the telegram-\>attachments configuration option. Make sure this directory is shared over a HTTP webserver like apache and it is writeable by the webserver. Configure telegram-\>url to point to this same directory.
+The photo's and attachments send by people in telegram and signal groups are downloaded and placed in suitable directories. For Telegram, use the **telegram-\>attachments** configuration option. Make sure this directory is shared over a HTTP webserver like apache and it is writeable by the webserver. Configure **telegram-\>url** to point to this same directory.
 
-The signal-cli program by default saves all attachments in a directory **~/.local/share/signal-cli/attachments**. The easiest way to handle this is to move this entire directory to somewhere below the documentroot of the webserver and symlink it.
+The **signal-cli** program by default saves all attachments in a directory **~/.local/share/signal-cli/attachments**. The easiest way to handle this is to move this entire directory to somewhere below the documentroot of the webserver and symlink it.
 
 ## Start the IRC bot
 
-Verify the bot will be receiving messages in the telegram group by checking the **telegram->file**. Then you can start the IRC part:
+Verify permissions on the **signal-\>infile** and **irc-\>infile** files. Both should be writable by the user running the scripts and also by the webserver that is executing the telegram webHook. Then you can start the bot.
 
 ```bash
 $ ./hermod
@@ -132,6 +133,6 @@ Establishing connection to [irc.freenode.net]
 ```
 that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
 ```bash
-@reboot screen -S hermod -d -m /home/hermod/bin/hermod
-@reboot screen -S poller -d -m /home/hermod/bin/signalpoller
+@reboot screen -S hermod -d -m while true; do /home/hermod/bin/hermod; done
+@reboot screen -S poller -d -m while true; do /home/hermod/bin/signalpoller; done
 ```
