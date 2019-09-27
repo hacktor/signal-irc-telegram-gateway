@@ -98,7 +98,7 @@ for (;;) {
                 print $w "$text";
                 close $w;
 
-                open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{signal}->{file}";
+                open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
                 print $w "[Sg] $text";
                 close $w;
 
