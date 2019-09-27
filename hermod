@@ -13,20 +13,21 @@ use HTTP::Tiny;
 use URI::Escape;
 use JSON qw( decode_json );
 
-my $cfg = "/etc/hermod.json";
-open my $fh, '<', $cfg or die "error opening $cfg $!";
-my $config = decode_json do { local $/; <$fh> };
+open my $fh, '<', "/etc/hermod.json" or die "error opening /etc/hermod.json $!";
+my $cfg = decode_json do { local $/; <$fh> };
+close $fh;
+open my $dbg, ">>", $cfg->{ird}->{debug} if defined $cfg->{ird}->{debug};
 
-my $URL = "https://api.telegram.org/bot$config->{telegram}->{token}/sendMessage";
+my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
 
 # We create a new PoCo-IRC object
 my $irc = POE::Component::IRC->spawn(
-   nick     => $config->{irc}->{nick},
-   ircname  => $config->{irc}->{ircname},
-   username => $config->{irc}->{ident},
-   server   => $config->{irc}->{node},
-   Port     => $config->{irc}->{port},
-   UseSSL   => $config->{irc}->{UseSSL},
+   nick     => $cfg->{irc}->{nick},
+   ircname  => $cfg->{irc}->{ircname},
+   username => $cfg->{irc}->{ident},
+   server   => $cfg->{irc}->{node},
+   Port     => $cfg->{irc}->{port},
+   UseSSL   => $cfg->{irc}->{UseSSL},
 ) or die "Oh noooo! $!";
 
 POE::Session->create(
@@ -41,7 +42,7 @@ $poe_kernel->run();
 sub _start {
     # file to be read and send to the channel
     $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
-        filename => $config->{irc}->{infile},
+        filename => $cfg->{irc}->{infile},
     ));
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
@@ -52,10 +53,10 @@ sub irc_001 {
     my $sender = $_[SENDER];
     my $irc = $sender->get_heap();
     print "Connected to ", $irc->server_name(), "\n";
+    print $dbg "Connected to ", $irc->server_name(), "\n" if defined $dbg;
 
     # we join our channel
-    $irc->yield( join => $config->{irc}->{channel} );
-    return;
+    $irc->yield( join => $cfg->{irc}->{channel} );
 }
 
 sub irc_public {
@@ -69,20 +70,19 @@ sub irc_join {
     my ($who,$channel) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
     my $text = "[IRC] $nick joined the chat\n";
-    relay($text) if defined $config->{irc}->{showjoin};
+    relay($text) if defined $cfg->{irc}->{showjoin};
 }
 
 sub irc_quit {
     my ($who,$msg) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
     my $text = "[IRC] $nick quit the chat ($msg)\n";
-    relay($text) if defined $config->{irc}->{showquit};
+    relay($text) if defined $cfg->{irc}->{showquit};
 }
 
 sub irc_tail_input {
     my ($kernel, $sender, $filename, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
-    $irc->yield( privmsg => $config->{irc}->{channel} => $input );
-    return;
+    $irc->yield( privmsg => $cfg->{irc}->{channel} => $input );
 }
 
 # This will produce some debug info.
@@ -99,21 +99,20 @@ sub _default {
         }
     }
     print join ' ', @output, "\n";
+    print $dbg join ' ', @output, "\n" if defined $db if defined $dbg;
     die "I got disconnected :( :(\nKilling myself..\n" if grep(/irc_disconnect/,@output);
-    return;
 }
 
 sub relay {
     my $text = shift;
+    print $dbg $text if defined $dbg;
 
     # we relay straight to telegram
-    my $data = "chat_id=$config->{telegram}->{chat_id}&text=" . uri_escape($text);
+    my $data = "chat_id=$cfg->{telegram}->{chat_id}&text=" . uri_escape($text);
     HTTP::Tiny->new->get( "$URL?$data" );
 
     # we write to the signal infile
-    open my $w, ">>", $config->{signal}->{infile};
+    open my $w, ">>", $cfg->{signal}->{infile};
     print $w $text;
     close $w;
-
-    return;
 }
