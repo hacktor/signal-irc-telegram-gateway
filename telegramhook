@@ -122,6 +122,8 @@ for (@lines) {
 
 finish("Relayed messages\n");
 
+print "https://xkcd.com/2200/\n";
+
 sub finish {
     print $dbg shift if defined $cfg->{telegram}->{debug};
     print $cgi->header(-type => 'application/json', -connection => 'close');
