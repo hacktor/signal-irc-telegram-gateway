@@ -79,7 +79,7 @@ for (;;) {
         if (defined $cfg->{nicks}->{$sender}) {
             $anonsender = $cfg->{nicks}->{$sender};
         } else {
-            $anonsender =~ s/.*(\d\d\d\d)$/Piraat-$1/;
+            $anonsender =~ s/.*(\d\d\d\d)$/$cfg->{signal}->{anon}-$1/;
             $cfg->{nicks}->{$sender} = $anonsender;
             nickhelp($cfg,$sender,$anonsender);
             setalias($cfg,$sender,$anonsender);
