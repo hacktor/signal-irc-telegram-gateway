@@ -99,7 +99,7 @@ sub _default {
         }
     }
     print join ' ', @output, "\n";
-    print $dbg join ' ', @output, "\n" if defined $db if defined $dbg;
+    print $dbg join ' ', @output, "\n" if defined $dbg;
     die "I got disconnected :( :(\nKilling myself..\n" if grep(/irc_disconnect/,@output);
 }
 
