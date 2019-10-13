@@ -62,7 +62,7 @@ if (defined $doc->{file_id}) {
         my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
         qx( wget -O $cfg->{telegram}->{attachments}/$file https://api.telegram.org/file/bot$cfg->{telegram}->{token}/$path >/dev/null 2>&1 );
         if ($? == 0) {
-            print $sig "FILE:$file [send by $first $last on telegram] $caption\n";
+            print $sig "FILE:$file [sent by $first $last on telegram] $caption\n";
             $text = "** sends a $type: $cfg->{telegram}->{url}/$file";
             $text .= " with caption: $caption" if $caption;
         } else {
@@ -115,7 +115,7 @@ for (@lines) {
     } else {
         print $irc $msg;
     }
-    # skip documents, photo's. they've been send already.
+    # skip documents, photo's. they've been sent already.
     next if $msg =~ /\*\* sends a /;
     print $sig $msg;
 }
