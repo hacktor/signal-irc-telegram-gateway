@@ -47,9 +47,11 @@ while (my $cgi = CGI::Fast->new) {
             $doc = @{$dj->{message}->{photo}}[-1];
             $type = 'photo';
         }
-        if (defined $dj->{message}->{document}) {
-            $doc = $dj->{message}->{document};
-            $type = 'document';
+        foreach my $t ('voice', 'audio', 'document') { 
+            if (defined $dj->{message}->{$t}) {
+                $doc = $dj->{message}->{$t};
+                $type = $t;
+            }
         }
         
         if (defined $doc->{file_id}) {
