@@ -64,7 +64,7 @@ while (my $cgi = CGI::Fast->new) {
                 qx( wget -O $cfg->{telegram}->{attachments}/$file https://api.telegram.org/file/bot$cfg->{telegram}->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
                     print $sig "FILE:$file [sent by $first $last on telegram] $caption\n";
-                    $text = "** sends a $type: $cfg->{telegram}->{url}/$file";
+                    $text = "** sends $type: $cfg->{telegram}->{url}/$file";
                     $text .= " with caption: $caption" if $caption;
                 } else {
                     print $dbg "Error getting $type $name $file\n";
