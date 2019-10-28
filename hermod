@@ -3,6 +3,7 @@
 # IRC Bot for Hermod Telegram Gateway. Reads from a logfile to be send to irc and relays
 # messages from irc to telegram and to another logfile which is send to a signal group
 # by signalpoller.
+# When twitter is configured, check for status updates of a twitter account and relay those.
 #
 # 2019, Ruben de Groot
 
@@ -12,8 +13,9 @@ use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::SSLify);
 use HTTP::Tiny;
 use URI::Escape;
 use JSON qw( decode_json );
+use Net::Twitter;
 
-open my $fh, '<', "/etc/hermod.json" or die "error opening /etc/hermod.json $!";
+open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 close $fh;
 open my $dbg, ">>", $cfg->{ird}->{debug} if defined $cfg->{ird}->{debug};
@@ -37,7 +39,52 @@ POE::Session->create(
     heap => { irc => $irc },
 );
 
+POE::Session->create(
+    inline_states => {
+      _start => sub {
+        $_[KERNEL]->delay(tick => 60);
+      },
+      tick => sub {
+        &wakeywakey;
+        $_[KERNEL]->delay(tick => $cfg->{twitter}->{tick});
+      },
+    },
+) if defined $cfg->{twitter}->{tick};
+
+my $nt = Net::Twitter->new(
+    traits   => [qw/API::RESTv1_1/],
+    consumer_key        => $cfg->{twitter}->{consumer_key},
+    consumer_secret     => $cfg->{twitter}->{consumer_secret},
+    access_token        => $cfg->{twitter}->{token},
+    access_token_secret => $cfg->{twitter}->{token_secret},
+) if defined $cfg->{twitter}->{consumer_key};
+
 $poe_kernel->run();
+
+sub wakeywakey {
+    # wakes up every twitter->tick seconds and checks for new status for twitter->screen_name
+    my $result = eval {
+        my $s = $nt->lookup_users({screen_name => [$cfg->{twitter}->{screen_name}]});
+        if (defined $cfg->{twitter}->{status} and defined $s->[0]->{status}->{id} and 
+                $cfg->{twitter}->{status} ne $s->[0]->{status}->{id}) {
+            # new tweet or retweet detected
+            my $kind = (defined $s->[0]->{status}->{retweeted_status}) ? "Retweet" : "Tweet";
+            my $text = "[$kind] $cfg->{twitter}->{screen_name}: https://twitter.com/$cfg->{twitter}->{screen_name}/status/$s->[0]->{status}->{id}\n";
+            if (defined $s->[0]->{status}->{text}) {
+                $text .= "[$kind] $_\n" for split /\n/, $s->[0]->{status}->{text};
+            }
+            relay($text);
+            open my $w, ">>", $cfg->{irc}->{infile};
+            print $w $text;
+            close $w;
+        }
+        $cfg->{twitter}->{status} = $s->[0]->{status}->{id} if defined $s->[0]->{status}->{id};
+    };
+    unless ($result) {
+        print $@;
+        print $dbg $@ if defined $dbg;
+    }
+}
 
 sub _start {
     # file to be read and send to the channel
@@ -81,7 +128,7 @@ sub irc_quit {
 }
 
 sub irc_tail_input {
-    my ($kernel, $sender, $filename, $input) = @_[KERNEL, SENDER, ARG0, ARG1];
+    my ($input) = @_[ARG1];
     $irc->yield( privmsg => $cfg->{irc}->{channel} => $input );
 }
 
@@ -108,7 +155,7 @@ sub relay {
     print $dbg $text if defined $dbg;
 
     # we relay straight to telegram
-    my $data = "chat_id=$cfg->{telegram}->{chat_id}&text=" . uri_escape($text);
+    my $data = "chat_id=$cfg->{telegram}->{chat_id}&text=" . uri_escape_utf8($text);
     HTTP::Tiny->new->get( "$URL?$data" );
 
     # we write to the signal infile
