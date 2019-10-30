@@ -69,10 +69,7 @@ sub wakeywakey {
                 $cfg->{twitter}->{status} ne $s->[0]->{status}->{id}) {
             # new tweet or retweet detected
             my $kind = (defined $s->[0]->{status}->{retweeted_status}) ? "Retweet" : "Tweet";
-            my $text = "[$kind] $cfg->{twitter}->{screen_name}: https://twitter.com/$cfg->{twitter}->{screen_name}/status/$s->[0]->{status}->{id}\n";
-            if (defined $s->[0]->{status}->{text}) {
-                $text .= "[$kind] $_\n" for split /\n/, $s->[0]->{status}->{text};
-            }
+            my $text = "[$kind] https://twitter.com/$cfg->{twitter}->{screen_name}/status/$s->[0]->{status}->{id}\n";
             relay($text);
             open my $w, ">>", $cfg->{irc}->{infile};
             print $w $text;
