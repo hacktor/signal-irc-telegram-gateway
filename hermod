@@ -135,8 +135,8 @@ sub irc_quit {
 }
 
 sub irc_tail_input {
-    my ($input) = @_[ARG1];
-    $irc->yield( privmsg => $cfg->{irc}->{channel} => $input );
+    my ($kernel, $sender, $input) = @_[KERNEL, SENDER, ARG1];
+    $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, $input );
 }
 
 # This will produce some debug info.
@@ -159,11 +159,13 @@ sub _default {
 
 sub relay {
     my $text = shift;
+    my $telmsg;
     print $dbg $text if defined $dbg;
 
     # we relay straight to telegram
-    my $data = "chat_id=$cfg->{telegram}->{chat_id}&text=" . uri_escape_utf8($text);
-    HTTP::Tiny->new->get( "$URL?$data" );
+    eval { $telmsg = uri_escape($text); };
+    $telmsg = uri_escape_utf8($text) if $@;
+    HTTP::Tiny->new->get( "$URL?chat_id=$cfg->{telegram}->{chat_id}&text=$telmsg" );
 
     # we write to the signal infile
     open my $w, ">>", $cfg->{signal}->{infile};
