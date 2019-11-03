@@ -63,19 +63,26 @@ $poe_kernel->run();
 
 sub wakeywakey {
     # wakes up every twitter->tick seconds and checks for new status for twitter->screen_name
+    return unless defined $cfg->{twitter}->{screen_names} and @{$cfg->{twitter}->{screen_names}};
     my $result = eval {
-        my $s = $nt->lookup_users({screen_name => [$cfg->{twitter}->{screen_name}]});
-        if (defined $cfg->{twitter}->{status} and defined $s->[0]->{status}->{id} and 
-                $cfg->{twitter}->{status} ne $s->[0]->{status}->{id}) {
-            # new tweet or retweet detected
-            my $kind = (defined $s->[0]->{status}->{retweeted_status}) ? "Retweet" : "Tweet";
-            my $text = "[$kind] https://twitter.com/$cfg->{twitter}->{screen_name}/status/$s->[0]->{status}->{id}\n";
-            relay($text);
-            open my $w, ">>", $cfg->{irc}->{infile};
-            print $w $text;
-            close $w;
+        my $s = $nt->lookup_users({screen_name => $cfg->{twitter}->{screen_names}});
+        if (ref $s eq "ARRAY") {
+            for (@$s) {
+                if (defined $cfg->{twitter}->{$_->{screen_name}}->{status} and defined $_->{status}->{id} and
+                        $cfg->{twitter}->{$_->{screen_name}}->{status} ne $_->{status}->{id}) {
+                    # new tweet or retweet detected
+                    my $kind = (defined $_->{status}->{retweeted_status}) ? "Retweet" : "Tweet";
+                    my $text = "[$kind] https://twitter.com/$_->{screen_name}/status/$_->{status}->{id}\n";
+                    relay($text);
+                    open my $w, ">>", $cfg->{irc}->{infile};
+                    print $w $text;
+                    close $w;
+                }
+                $cfg->{twitter}->{$_->{screen_name}}->{status} = $_->{status}->{id};
+            }
+        } else {
+            print $dbg "lookup_users failed; ref equals " . ref $s . "\n" if defined $dbg;
         }
-        $cfg->{twitter}->{status} = $s->[0]->{status}->{id} if defined $s->[0]->{status}->{id};
     };
     unless ($result) {
         print $@;
@@ -157,6 +164,7 @@ sub _default {
 sub relay {
     my $text = shift;
     my $telmsg;
+    print $text;
     print $dbg $text if defined $dbg;
 
     # we relay straight to telegram
