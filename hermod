@@ -18,7 +18,7 @@ use Net::Twitter;
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 close $fh;
-open my $dbg, ">>", $cfg->{ird}->{debug} if defined $cfg->{ird}->{debug};
+open my $dbg, ">>", $cfg->{irc}->{debug} if defined $cfg->{irc}->{debug};
 
 my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
 
