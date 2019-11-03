@@ -47,6 +47,14 @@ appropriately
         "maxmsg": 400,
         "infile": "/var/www/log/toirc.log",
         "debug": "/var/www/log/irc.debug"
+    },
+    "twitter": {
+        "consumer_key": "xxxxxxxxxxxxxxxxxxxx",
+        "consumer_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "token": "xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxx",
+        "token_secret": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "screen_names": [],
+        "tick": 300
     }
 }
 ```
@@ -114,6 +122,10 @@ create table alias (phone text unique not null, nick text);
 The photo's and attachments send by people in telegram and signal groups are downloaded and placed in suitable directories. For Telegram, use the **telegram-\>attachments** configuration option. Make sure this directory is shared over a HTTP webserver like apache and it is writeable by the webserver. Configure **telegram-\>url** to point to this same directory.
 
 The **signal-cli** program by default saves all attachments in a directory **~/.local/share/signal-cli/attachments**. The easiest way to handle this is to move this entire directory to somewhere below the documentroot of the webserver and symlink it.
+
+## following twitter accounts
+
+It is possible to follow twitter accounts. New statuses of these accounts will be posted by the bot. For this functionality you have to setup a [Twitter App](https://developer.twitter.com/en/apps). Fill in the **consumer\_key**, **consumer\_secret**, **token** and **token\_secret** from the app in /etc/hermod.json as well as a list of **screen\_names** you want to follow.
 
 ## Start the IRC bot
 
