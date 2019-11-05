@@ -115,8 +115,9 @@ In all channels.
 
 You need to create an sqlite database file:
 ```sql
-create table alias (phone text unique not null, nick text);
+sqlite> CREATE TABLE alias (phone text unique not null, nick text);
 ```
+
 ## Directories for attachments and urls
 
 The photo's and attachments send by people in telegram and signal groups are downloaded and placed in suitable directories. For Telegram, use the **telegram-\>attachments** configuration option. Make sure this directory is shared over a HTTP webserver like apache and it is writeable by the webserver. Configure **telegram-\>url** to point to this same directory.
@@ -126,6 +127,13 @@ The **signal-cli** program by default saves all attachments in a directory **~/.
 ## following twitter accounts
 
 It is possible to follow twitter accounts. New statuses of these accounts will be posted by the bot. For this functionality you have to setup a [Twitter App](https://developer.twitter.com/en/apps). Fill in the **consumer\_key**, **consumer\_secret**, **token** and **token\_secret** from the app in /etc/hermod.json as well as a list of **screen\_names** you want to follow.
+
+You need to create an sqlite database for twitter statusses, to weed out double retweets
+```sql
+sqlite> CREATE TABLE status (id text);
+sqlite> CREATE INDEX status_id_idx ON status (id);
+```
+Make sure this database file is writeable by the webserver user.
 
 ## Start the IRC bot
 
