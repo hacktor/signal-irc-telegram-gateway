@@ -18,12 +18,18 @@ use Text::Unidecode;
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 
-my $ok = '{"ok":true,"result":true}';
-
 # communicate with bot through a logfile
 open my $irc, '>>:utf8', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
 open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
 open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
+
+sub ok {
+    my $msg = shift;
+    print $dbg $msg if defined $msg and defined $dbg;
+    print CGI->header(-type => 'application/json');
+    print '{"ok": true, "status": 200}'."\n\n";
+    exit;
+}
 
 while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
@@ -39,7 +45,7 @@ while (my $cgi = CGI::Fast->new) {
         my $text = (defined $dj->{message}->{text}) ? $dj->{message}->{text} : "";
         my $first = (defined $dj->{message}->{from}->{first_name}) ? $dj->{message}->{from}->{first_name} : "";
         my $last = (defined $dj->{message}->{from}->{last_name}) ? $dj->{message}->{from}->{last_name} : "";
-        my $caption = (defined $dj->{message}->{'caption'}) ? $dj->{message}->{caption} : "";
+        my $caption = (defined $dj->{message}->{caption}) ? $dj->{message}->{caption} : "";
         
         # look for photo's and documents
         my ($type,$doc);
@@ -55,6 +61,8 @@ while (my $cgi = CGI::Fast->new) {
         }
         
         if (defined $doc->{file_id}) {
+
+            # download the file
             my $response = HTTP::Tiny->new->get( "https://api.telegram.org/bot$cfg->{telegram}->{token}/getFile?file_id=$doc->{file_id}" );
             if ($response->{success}) {
                 my $djfile = decode_json( $response->{content} );
@@ -78,6 +86,14 @@ while (my $cgi = CGI::Fast->new) {
         $text = "(reply to: $dj->{message}->{reply_to_message}->{text}) " . $text if defined $dj->{message}->{reply_to_message} and
             $dj->{message}->{reply_to_message}->{text};
         
+        # is the message forwarded from another channel?
+        if (defined $dj->{message}->{forward_from_chat}) {
+            $text = "[$dj->{message}->{forward_from_chat}->{title}]: $dj->{message}->{text}\n";
+            print $irc $text;
+            print $sig $text;
+            ok("forwarded msg: $dj->{message}->{text} from $dj->{message}->{forward_from_chat}->{title}\n");
+        }
+        
         # look for new chat members
         if (defined $dj->{message}->{new_chat_members}) {
             my $members = '';
@@ -88,7 +104,7 @@ while (my $cgi = CGI::Fast->new) {
             $text = "[Tg] $members joined the chat\n";
             print $irc $text;
             print $sig $text;
-            finish("New member(s): $members\n");
+            ok("New member(s): $members\n");
         }
         
         # look for leaving chat members
@@ -96,9 +112,9 @@ while (my $cgi = CGI::Fast->new) {
             $text = "[Tg] $dj->{message}->{left_chat_member}->{first_name} left the chat\n";
             print $irc $text;
             print $sig $text;
-            finish("Leaving member: $dj->{message}->{left_chat_member}->{first_name}\n");
+            ok("Leaving member: $dj->{message}->{left_chat_member}->{first_name}\n");
         }
-        
+
         # split lines and write to logs for signal and irc
         my @lines = split /\n/, $text;
         for (@lines) {
@@ -121,6 +137,5 @@ while (my $cgi = CGI::Fast->new) {
             print $sig $msg;
         }
     }
-    print $cgi->header(-type => 'application/json');
-    print $ok."\n\n";
+    ok();
 }
