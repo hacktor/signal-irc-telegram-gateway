@@ -71,11 +71,16 @@ sub twitterpoll {
             for (@$s) {
                 if (defined $cfg->{twitter}->{$_->{screen_name}}->{status} and defined $_->{status}->{id} and
                         $cfg->{twitter}->{$_->{screen_name}}->{status} ne $_->{status}->{id}) {
+                    next if defined $cfg->{twitter}->{$_->{screen_name}}->{retweeted_status} and
+                        defined $_->{status}->{retweeted_status}->{id} and
+                        $cfg->{twitter}->{$_->{screen_name}}->{retweeted_status} eq $_->{status}->{retweeted_status}->{id};
 
                     # new tweet or retweet detected, check if they are really new
                     if (defined $_->{status}->{retweeted_status}) {
+                        $cfg->{twitter}->{$_->{screen_name}}->{retweeted_status} = $_->{status}->{retweeted_status}->{id};
                         next if oldstatus($_->{status}->{retweeted_status}->{id});
                     } else {
+                        $cfg->{twitter}->{$_->{screen_name}}->{status} = $_->{status}->{id};
                         next if oldstatus($_->{status}->{id});
                     }
                     my $text = "https://twitter.com/$_->{screen_name}/status/$_->{status}->{id}\n";
@@ -99,7 +104,6 @@ sub twitterpoll {
         }
     };
     unless ($result) {
-        print $@;
         print $dbg $@ if defined $dbg;
     }
 }
