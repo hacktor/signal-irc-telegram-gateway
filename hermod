@@ -75,6 +75,8 @@ sub twitterpoll {
                         defined $_->{status}->{retweeted_status}->{id} and
                         $cfg->{twitter}->{$_->{screen_name}}->{retweeted_status} eq $_->{status}->{retweeted_status}->{id};
 
+                    next if defined $_{status}->{in_reply_to_status_id} and defined $cfg->{twitter}->{noreply};
+
                     # new tweet or retweet detected, check if they are really new
                     if (defined $_->{status}->{retweeted_status}) {
                         $cfg->{twitter}->{$_->{screen_name}}->{retweeted_status} = $_->{status}->{retweeted_status}->{id};
