@@ -131,7 +131,7 @@ It is possible to follow twitter accounts. New statuses of these accounts will b
 You need to create an sqlite database for twitter statusses, to weed out double retweets
 ```sql
 sqlite> CREATE TABLE status (id text);
-sqlite> CREATE INDEX status_id_idx ON status (id);
+sqlite> CREATE UNIQUE INDEX status_id_idx ON status (id);
 ```
 Make sure this database file is writeable by the webserver user.
 
