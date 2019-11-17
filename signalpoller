@@ -14,6 +14,7 @@ use HTTP::Tiny;
 use LWP::UserAgent;
 use URI::Escape;
 use DBI;
+use Capture::Tiny 'tee';
 
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
@@ -22,7 +23,7 @@ $cfg->{nicks} = getalias($cfg);
 open my $tail, "<", $cfg->{signal}->{infile} or die @_;
 my $inode = (stat($cfg->{signal}->{infile}))[1];
 
-open my $debug, ">>", $cfg->{signal}->{debug} if defined $cfg->{signal}->{debug};
+open my $dbg, ">>", $cfg->{signal}->{debug} if defined $cfg->{signal}->{debug};
 
 # SEEK_END
 seek($tail, 0, 2) or die @_;
@@ -60,10 +61,12 @@ for (;;) {
 
     # now poll the signal group for new messages
     my $json = JSON->new->allow_nonref;
-    my @lines = qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} receive --json );
+    my ($out, $err, $ret) = tee {
+        system($cfg->{signal}->{cli},"-u",$cfg->{signal}->{phone},"receive","--json");
+    };
+    print $dbg $out, $err if defined $dbg;
+    my @lines = split /\n/, $out;
     for my $line (@lines) {
-        print $debug $line if defined $cfg->{signal}->{debug};
-        print $line; chomp $line;
         my $sigmsg = $json->decode($line);
         next unless defined $sigmsg->{envelope}->{dataMessage};
         $sigmsg = $sigmsg->{envelope};
@@ -98,12 +101,15 @@ for (;;) {
                 print $w "$text";
                 close $w;
 
+                $text = "[Sg] $text";
                 open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
-                print $w "[Sg] $text";
+                print $w "$text";
                 close $w;
 
                 my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
-                my $telmsg = uri_escape_utf8("[Sg] $text");
+                my $telmsg;
+                eval { $telmsg = uri_escape($text); };
+                $telmsg = uri_escape_utf8($text) if $@;
                 my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
                 print "$response->{status} $response->{reason}\n";
 
@@ -197,5 +203,5 @@ sub nickhelp {
     my $text = 'You do not have a nickname set. You are now known as '.$nick;
     $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
     my $out = qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -m "$text" $phone );
-    print $debug $out if defined $cfg->{signal}->{debug};
+    print $dbg $out if defined $dbg;
 }
