@@ -1,0 +1,150 @@
+#!/usr/bin/perl
+#
+# When twitter is configured, check for status updates of some twitter screen_names and relay those.
+# optionally poll for certain tags and relay those.
+#
+# 2019, Ruben de Groot
+
+use strict;
+use HTTP::Tiny;
+use URI::Escape;
+use JSON qw( decode_json );
+use Net::Twitter;
+use DBI;
+
+open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
+my $cfg = decode_json do { local $/; <$fh> };
+close $fh;
+open my $dbg, ">>", $cfg->{twitter}->{debug} if defined $cfg->{twitter}->{debug};
+
+my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
+
+die "Missing consumer key" unless defined $cfg->{twitter}->{consumer_key};
+die "Missing consumer secret" unless defined $cfg->{twitter}->{consumer_secret};
+die "Missing token" unless defined $cfg->{twitter}->{token};
+die "Missing token secret" unless defined $cfg->{twitter}->{token_secret};
+die "No names or tags defined" unless defined $cfg->{twitter}->{screen_names} or defined $cfg->{twitter}->{tags};
+die "No chat_id defined" unless defined $cfg->{twitter}->{chat_id} or defined $cfg->{telegram}->{chat_id};
+
+my $nt = Net::Twitter->new(
+    traits   => [qw/API::RESTv1_1/],
+    consumer_key        => $cfg->{twitter}->{consumer_key},
+    consumer_secret     => $cfg->{twitter}->{consumer_secret},
+    access_token        => $cfg->{twitter}->{token},
+    access_token_secret => $cfg->{twitter}->{token_secret},
+) if defined $cfg->{twitter}->{consumer_key};
+
+# main loop
+while (1) {
+    namepoll($cfg->{twitter}->{screen_names}) if defined $cfg->{twitter}->{screen_names} and @{$cfg->{twitter}->{screen_names}};
+    tagpoll($cfg->{twitter}->{tags}) if defined $cfg->{twitter}->{tags} and @{$cfg->{twitter}->{tags}};
+    my $tick = (defined $cfg->{twitter}->{tick}) ? $cfg->{twitter}->{tick} : 300;
+    sleep $tick;
+}
+
+sub namepoll {
+
+    # wakes up every twitter->tick seconds and checks for new status for twitter->screen_name
+    my $names = shift;
+    eval {
+        my $s = $nt->lookup_users({screen_name => $names});
+        if (ref $s ne "ARRAY") {
+            print $dbg "lookup_users failed; ref equals " . ref $s . "\n" if defined $dbg;
+            return;
+        }
+        for (@$s) {
+            # remember names and id's
+            next unless defined $cfg->{twitter}->{$_->{screen_name}} and
+                    defined $_->{status}->{id};
+            $cfg->{twitter}->{$_->{screen_name}} = 1;
+            next if defined $cfg->{twitter}->{ids}->{$_->{status}->{id}};
+            $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1;
+            next if defined $_->{status}->{retweeted_status}->{id} and
+                    defined $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}};
+            $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}} = 1;
+
+            next if defined $_->{status}->{in_reply_to_status_id} and
+                    defined $cfg->{twitter}->{noreply};
+
+            next if defined $_->{status}->{retweeted_status}->{id} and
+                    defined $cfg->{twitter}->{noretweet};
+
+            # new tweet or retweet detected, check if they are really new
+            if (defined $_->{status}->{retweeted_status}->{id}) {
+                next if oldstatus($_->{status}->{retweeted_status}->{id});
+            } else {
+                next if oldstatus($_->{status}->{id});
+            }
+            my $text = "https://twitter.com/$_->{screen_name}/status/$_->{status}->{id}\n";
+            relay($text);
+        }
+    };
+    print $dbg $@ if defined $dbg and $@;
+}
+
+sub tagpoll {
+
+    # wakes up every twitter->tick seconds looking for tags
+    my $tags = shift;
+    for my $tag (@$tags) {
+        eval {
+            my $s = $nt->search($tag);
+            if (ref $s ne "HASH") {
+                print $dbg "search for $tag failed; ref equals " . ref $s . "\n" if defined $dbg;
+                return;
+            }
+            next unless defined $s->{statuses} and @{$s->{statuses}};
+            for (@{$s->{statuses}}) {
+                next unless defined $_->{id};
+                next if defined $cfg->{twitter}->{ids}->{$_->{id}};
+                $cfg->{twitter}->{ids}->{$_->{id}} = 1;
+
+                # ignore if this is the first round of polling
+                next unless defined $cfg->{twitter}->{polled};
+
+                next if oldstatus($_->{id},"$_->{user}->{screen_name}\n");
+
+                my $text = "https://twitter.com/$_->{user}->{screen_name}/status/$_->{id}\n";
+                relay($text);
+            }
+        };
+        print $dbg $@ if defined $dbg and $@;
+    }
+    $cfg->{twitter}->{polled} = 1;
+}
+
+sub relay {
+    my $text = shift;
+    print $text;
+    print $dbg $text if defined $dbg;
+
+    my $telmsg;
+    eval { $telmsg = uri_escape($text); };
+    $telmsg = uri_escape_utf8($text) if $@;
+    my $chat_id = (defined $cfg->{twitter}->{chat_id}) ? $cfg->{twitter}->{chat_id} : $cfg->{telegram}->{chat_id};
+
+    HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
+
+    # the twitter chat_id is supposedly linked to the telegram group
+    # write to files to irc, signal if twitter->chat_id is not defined
+    unless (defined $cfg->{twitter}->{chat_id}) {
+        for my $file ($cfg->{irc}->{infile}, $cfg->{signal}->{infile}) {
+            open my $w, ">>", $file;
+            print $w $text;
+            close $w;
+        }
+    }
+}
+
+sub oldstatus {
+    my $id = shift;
+    my $text = shift; print $text;
+    return "status id error" unless $id =~ /^\d+$/;
+
+    # returns empty string if the insert succeeded
+    eval {
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{twitter}->{db}", "", "", { RaiseError => 1 }, );
+        $dbh->do("insert into status values ($id)");
+    };
+    return $@;
+}
