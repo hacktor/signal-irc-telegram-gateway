@@ -133,7 +133,7 @@ while (my $cgi = CGI::Fast->new) {
                 print $irc $msg;
             }
             # skip documents, photo's. they've been sent already.
-            next if $msg =~ /\*\* sends a /;
+            next if $msg =~ /\*\* sends /;
             print $sig $msg;
         }
     }
