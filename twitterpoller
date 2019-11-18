@@ -102,6 +102,9 @@ sub tagpoll {
                 next unless defined $_->{id};
                 next if defined $cfg->{twitter}->{ids}->{$_->{id}};
                 $cfg->{twitter}->{ids}->{$_->{id}} = 1;
+                next if defined $_->{retweeted_status}->{id} and
+                        defined $cfg->{twitter}->{ids}->{$_->{retweeted_status}->{id}};
+                $cfg->{twitter}->{ids}->{$_->{retweeted_status}->{id}} = 1;
 
                 # skip if this is the first round of polling
                 next unless defined $cfg->{twitter}->{polled};
@@ -112,7 +115,8 @@ sub tagpoll {
                 next if defined $_->{retweeted_status}->{id} and
                         defined $cfg->{twitter}->{noretweet};
 
-                next if oldstatus($_->{id},"$_->{user}->{screen_name}\n");
+                next if oldstatus($_->{id});
+                next if defined $_->{retweeted_status}->{id} and oldstatus($_->{retweeted_status}->{id});
 
                 my $text = "https://twitter.com/$_->{user}->{screen_name}/status/$_->{id}\n";
                 relay($text);
@@ -148,7 +152,6 @@ sub relay {
 
 sub oldstatus {
     my $id = shift;
-    my $text = shift; print $text;
     return "status id error" unless $id =~ /^\d+$/;
 
     # returns empty string if the insert succeeded
