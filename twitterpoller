@@ -53,20 +53,34 @@ sub namepoll {
             return;
         }
         for (@$s) {
-            # remember names and id's
-            next unless defined $cfg->{twitter}->{$_->{screen_name}} and
-                    defined $_->{status}->{id};
-            $cfg->{twitter}->{$_->{screen_name}} = 1;
-            next if defined $cfg->{twitter}->{ids}->{$_->{status}->{id}};
-            $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1;
-            next if defined $_->{status}->{retweeted_status}->{id} and
-                    defined $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}};
-            $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}} = 1;
 
+            # remember names and id's
+            unless (defined $cfg->{twitter}->{$_->{screen_name}}) {
+                $cfg->{twitter}->{$_->{screen_name}} = 1;
+                $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1
+                    if defined $_->{status}->{id};
+                next;
+            }
+
+            next if defined $_->{status}->{id} and $_->{status}->{id} =~ /^\d+$/ and
+                    defined $cfg->{twitter}->{ids}->{$_->{status}->{id}};
+            $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1
+                 if defined $_->{status}->{id};
+
+            next if defined $_->{status}->{retweeted_status}->{id} and
+                    $_->{status}->{retweeted_status}->{id} =~ /^\d+$/ and
+                    defined $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}};
+            $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}} = 1
+                 if defined $_->{status}->{retweeted_status}->{id};
+
+            # skip replies if noreply is defined
             next if defined $_->{status}->{in_reply_to_status_id} and
+                    $_->{status}->{in_reply_to_status_id} =~ /^\d+$/ and
                     defined $cfg->{twitter}->{noreply};
 
+            # skip retweets if noretweet is defined
             next if defined $_->{status}->{retweeted_status}->{id} and
+                    $_->{status}->{retweeted_status}->{id} =~ /^\d+$/ and
                     defined $cfg->{twitter}->{noretweet};
 
             # new tweet or retweet detected, check if they are really new
