@@ -87,6 +87,7 @@ sub tagpoll {
     # wakes up every twitter->tick seconds looking for tags
     my $tags = shift;
     for my $tag (@$tags) {
+
         eval {
             my $s = $nt->search($tag);
             if (ref $s ne "HASH") {
@@ -94,13 +95,22 @@ sub tagpoll {
                 return;
             }
             next unless defined $s->{statuses} and @{$s->{statuses}};
+
             for (@{$s->{statuses}}) {
+
+                # filter known id's
                 next unless defined $_->{id};
                 next if defined $cfg->{twitter}->{ids}->{$_->{id}};
                 $cfg->{twitter}->{ids}->{$_->{id}} = 1;
 
-                # ignore if this is the first round of polling
+                # skip if this is the first round of polling
                 next unless defined $cfg->{twitter}->{polled};
+
+                next if defined $_->{in_reply_to_status_id} and
+                        defined $cfg->{twitter}->{noreply};
+
+                next if defined $_->{retweeted_status}->{id} and
+                        defined $cfg->{twitter}->{noretweet};
 
                 next if oldstatus($_->{id},"$_->{user}->{screen_name}\n");
 
