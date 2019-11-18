@@ -128,9 +128,11 @@ The **signal-cli** program by default saves all attachments in a directory **~/.
 
 It is possible to follow twitter accounts. New statuses of these accounts will be posted by the bot. For this functionality you have to setup a [Twitter App](https://developer.twitter.com/en/apps). Fill in the **consumer\_key**, **consumer\_secret**, **token** and **token\_secret** from the app in /etc/hermod.json as well as a list of **screen\_names** you want to follow.
 
-You need to create an sqlite database for twitter statusses, to weed out double retweets
+The **twitterpoller** script polls twitter for **screen\_names** and **tags**, relaying newly found statusses. It is possible to skip statuses that are retweets or reply by defining either **twitter-\>noretweet** or **twitter-\>noreply** in hermod.json.
+
+You also need to create an sqlite database for twitter statuses, to weed out double (re)tweets
 ```sql
-sqlite> CREATE TABLE status (id text);
+sqlite> CREATE TABLE status (id TEXT, ts DATE DEFAULT (datetime('now','localtime')));
 sqlite> CREATE UNIQUE INDEX status_id_idx ON status (id);
 ```
 Make sure this database file is writeable by the webserver user.
