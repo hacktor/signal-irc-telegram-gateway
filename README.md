@@ -30,7 +30,7 @@ appropriately
     "telegram": {
         "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
         "chat_id": "-19999999",
-        "file": "/home/hermod/log/telegram.log",
+        "forward": 1,
         "debug": "/home/hermod/log/telegram.debug",
         "attachments": "/var/www/html/telegram",
         "url": "https://hermod.example.com/telegram"
@@ -54,10 +54,13 @@ appropriately
         "token": "xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxx",
         "token_secret": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "screen_names": [],
+        "tags": [],
         "tick": 300
     }
 }
 ```
+For more detailed information on the various configuration options, consult the [Wiki](./wiki)
+
 **signal-\>phone** is the phone number used by signal-cli. It has to be added to the group (**signal-\>gid**). **signal-\>anon** is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with **signal-cli**
 
 Refer to the [Telegram Bot API](https://core.telegram.org/bots/api) for details about **telegram-\>token** and **telegram-\>chat\_id**

@@ -89,8 +89,7 @@ sub namepoll {
             } else {
                 next if oldstatus($_->{status}->{id});
             }
-            my $text = "https://twitter.com/$_->{screen_name}/status/$_->{status}->{id}\n";
-            relay($text);
+            relay($_->{screen_name},$_->{status}->{id},$_->{status}->{text});
         }
     };
     print $dbg $@ if defined $dbg and $@;
@@ -132,8 +131,7 @@ sub tagpoll {
                 next if oldstatus($_->{id});
                 next if defined $_->{retweeted_status}->{id} and oldstatus($_->{retweeted_status}->{id});
 
-                my $text = "https://twitter.com/$_->{user}->{screen_name}/status/$_->{id}\n";
-                relay($text);
+                relay($_->{user}->{screen_name},$_->{id},$_{text});
             }
         };
         print $dbg $@ if defined $dbg and $@;
@@ -142,23 +140,27 @@ sub tagpoll {
 }
 
 sub relay {
-    my $text = shift;
-    print $text;
-    print $dbg $text if defined $dbg;
+    my ($name,$id,$text) = @_;
+    my $url = "https://twitter.com/$name/status/$id\n";
+    print $url;
+    print $dbg $url if defined $dbg;
 
     my $telmsg;
-    eval { $telmsg = uri_escape($text); };
-    $telmsg = uri_escape_utf8($text) if $@;
+    eval { $telmsg = uri_escape($url); };
+    $telmsg = uri_escape_utf8($url) if $@;
     my $chat_id = (defined $cfg->{twitter}->{chat_id}) ? $cfg->{twitter}->{chat_id} : $cfg->{telegram}->{chat_id};
 
     HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
 
     # the twitter chat_id is supposedly linked to the telegram group
-    # write to files to irc, signal if twitter->chat_id is not defined
-    unless (defined $cfg->{twitter}->{chat_id}) {
+    # write to files to irc, signal unless twitter->chat_id and telegram->forward are defined
+    unless (defined $cfg->{twitter}->{chat_id} and defined $cfg->{telegram}->{forward}) {
         for my $file ($cfg->{irc}->{infile}, $cfg->{signal}->{infile}) {
-            open my $w, ">>", $file;
-            print $w $text;
+            open my $w, ">>:utf8", $file;
+            print $w "[$name] $url\n";
+            for (split /\n/, $text) {
+                print $w "[$name] $_\n" if $_;
+            }
             close $w;
         }
     }

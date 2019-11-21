@@ -13,7 +13,7 @@
     "telegram": {
         "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
         "chat_id": "-19999999",
-        "file": "/home/hermod/log/telegram.log",
+        "forward": 1,
         "debug": "/home/hermod/log/telegram.debug",
         "attachments": "/var/www/html/telegram",
         "url": "https://hermod.example.com/telegram"

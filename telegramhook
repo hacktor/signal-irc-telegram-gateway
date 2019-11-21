@@ -87,11 +87,17 @@ while (my $cgi = CGI::Fast->new) {
             $dj->{message}->{reply_to_message}->{text};
         
         # is the message forwarded from another channel?
-        if (defined $dj->{message}->{forward_from_chat}) {
+        if (defined $dj->{message}->{forward_from_chat} and defined $cfg->{telegram}->{forward}) {
+
             $text = "[$dj->{message}->{forward_from_chat}->{title}]: $dj->{message}->{text}\n";
             print $irc $text;
             print $sig $text;
             ok("forwarded msg: $dj->{message}->{text} from $dj->{message}->{forward_from_chat}->{title}\n");
+
+        } elsif (defined $dj->{message}->{forward_from_chat}) {
+
+            # don't forward; let twitterpoller handle this
+            ok("NOT forwarded msg: $dj->{message}->{text} from $dj->{message}->{forward_from_chat}->{title}\n");
         }
         
         # look for new chat members
