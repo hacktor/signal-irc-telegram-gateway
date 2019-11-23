@@ -7,6 +7,7 @@
 
 use strict;
 use HTTP::Tiny;
+use HTML::Entities;
 use URI::Escape;
 use JSON qw( decode_json );
 use Net::Twitter;
@@ -159,7 +160,7 @@ sub relay {
             open my $w, ">>:utf8", $file;
             print $w "[$name] $url\n";
             for (split /\n/, $text) {
-                print $w "[$name] $_\n" if $_;
+                print $w decode_entities "[$name] $_\n" if $_;
             }
             close $w;
         }
