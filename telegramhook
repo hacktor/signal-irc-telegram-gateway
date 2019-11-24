@@ -14,6 +14,7 @@ use CGI::Fast qw/:standard/;
 use HTTP::Tiny;
 use JSON;
 use Text::Unidecode;
+use DBI;
 
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
@@ -22,6 +23,12 @@ my $cfg = decode_json do { local $/; <$fh> };
 open my $irc, '>>:utf8', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
 open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
 open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
+
+# bots cannot get a list of group members, so we keep a database
+my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{telegram}->{db}", "", "", { RaiseError => 1 }, )
+        if defined $cfg->{telegram}->{db};
+my $stmt = $dbh->prepare("insert into teleusers (id,first_name,last_name,username,is_bot) values (?,?,?,?,?)")
+        if defined $dbh;
 
 sub ok {
     my $msg = shift;
@@ -103,9 +110,10 @@ while (my $cgi = CGI::Fast->new) {
         # look for new chat members
         if (defined $dj->{message}->{new_chat_members}) {
             my $members = '';
-            foreach my $member (@{$dj->{message}->{new_chat_members}}) {
+            foreach my $m (@{$dj->{message}->{new_chat_members}}) {
+                $stmt->execute($m->{id},$m->{first_name},$m->{last_name},$m->{username},$m->{is_bot}) if defined $stmt;
                 $members .= ', ' if $members;
-                $members .= "$member->{first_name} $member->{last_name}";
+                $members .= "$m->{first_name} $m->{last_name}";
             }
             $text = "[Tg] $members joined the chat\n";
             print $irc $text;
@@ -114,7 +122,8 @@ while (my $cgi = CGI::Fast->new) {
         }
         
         # look for leaving chat members
-        if (defined $dj->{message}->{left_chat_member}) {
+        if (defined $dj->{message}->{left_chat_member}->{id}) {
+            $dbh->do("delete from teleusers where id = $dj->{message}->{left_chat_member}->{id}") if defined $dbh;
             $text = "[Tg] $dj->{message}->{left_chat_member}->{first_name} left the chat\n";
             print $irc $text;
             print $sig $text;
