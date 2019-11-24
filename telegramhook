@@ -27,7 +27,9 @@ open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->
 # bots cannot get a list of group members, so we keep a database
 my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{telegram}->{db}", "", "", { RaiseError => 1 }, )
         if defined $cfg->{telegram}->{db};
-my $stmt = $dbh->prepare("insert into teleusers (id,first_name,last_name,username,is_bot) values (?,?,?,?,?)")
+my $st_ins = $dbh->prepare("insert into teleusers (id,first_name,last_name,username,is_bot) values (?,?,?,?,?)")
+        if defined $dbh;
+my $st_del = $dbh->prepare("delete from teleusers where id = ?")
         if defined $dbh;
 
 sub ok {
@@ -111,9 +113,10 @@ while (my $cgi = CGI::Fast->new) {
         if (defined $dj->{message}->{new_chat_members}) {
             my $members = '';
             foreach my $m (@{$dj->{message}->{new_chat_members}}) {
-                $stmt->execute($m->{id},$m->{first_name},$m->{last_name},$m->{username},$m->{is_bot}) if defined $stmt;
+                $st_ins->execute($m->{id},$m->{first_name},$m->{last_name},$m->{username},$m->{is_bot}) if defined $st_ins;
                 $members .= ', ' if $members;
-                $members .= "$m->{first_name} $m->{last_name}";
+                $members .= "$m->{first_name}";
+                $members .= " $m->{last_name}" if $m->{last_name};
             }
             $text = "[Tg] $members joined the chat\n";
             print $irc $text;
@@ -123,7 +126,7 @@ while (my $cgi = CGI::Fast->new) {
         
         # look for leaving chat members
         if (defined $dj->{message}->{left_chat_member}->{id}) {
-            $dbh->do("delete from teleusers where id = $dj->{message}->{left_chat_member}->{id}") if defined $dbh;
+            $st_del->execute($dj->{message}->{left_chat_member}->{id}) if defined $st_del;
             $text = "[Tg] $dj->{message}->{left_chat_member}->{first_name} left the chat\n";
             print $irc $text;
             print $sig $text;
