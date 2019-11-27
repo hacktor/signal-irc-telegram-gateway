@@ -90,6 +90,8 @@ sub namepoll {
             } else {
                 next if oldstatus($_->{status}->{id});
             }
+
+            print $dbg "$_->{screen_name}: $_->{status}->{id} $_->{status}->{text}\n" if defined $dbg;
             relay($_->{screen_name},$_->{status}->{id},$_->{status}->{text});
         }
     };
@@ -132,7 +134,8 @@ sub tagpoll {
                 next if oldstatus($_->{id});
                 next if defined $_->{retweeted_status}->{id} and oldstatus($_->{retweeted_status}->{id});
 
-                relay($_->{user}->{screen_name},$_->{id},$_{text});
+                print $dbg "$_->{screen_name}: $_->{id} $_->{text}\n" if defined $dbg;
+                relay($_->{user}->{screen_name},$_->{id},$_->{text});
             }
         };
         print $dbg $@ if defined $dbg and $@;
