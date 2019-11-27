@@ -142,6 +142,7 @@ sub tagpoll {
 
 sub relay {
     my ($name,$id,$text) = @_;
+    my $http = HTTP::Tiny->new( max_redirect => 0 );
     my $url = "https://twitter.com/$name/status/$id\n";
     print $url;
     print $dbg $url if defined $dbg;
@@ -159,8 +160,15 @@ sub relay {
         for my $file ($cfg->{irc}->{infile}, $cfg->{signal}->{infile}) {
             open my $w, ">>:utf8", $file;
             print $w "[$name] $url\n";
-            for (split /\n/, $text) {
-                print $w decode_entities "[$name] $_\n" if $_;
+            for my $line (split /\n/, $text) {
+
+                # try to replace t.co short url's.
+                while ($line =~ /(https:\/\/t.co\/[0-9a-zA-Z]{10})/) {
+                    my $resp = $http->get( $1 );
+                    $line =~ s/$1/$resp->{headers}->{location}/ if defined $resp->{headers}->{location};
+                }
+
+                print $w decode_entities "[$name] $line\n" if $line;
             }
             close $w;
         }
