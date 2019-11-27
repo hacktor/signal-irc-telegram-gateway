@@ -11,7 +11,6 @@ use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::SSLify);
 use HTTP::Tiny;
 use URI::Escape;
 use JSON qw( decode_json );
-use Net::Twitter;
 use DBI;
 
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
@@ -33,18 +32,10 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public irc_join irc_quit irc_tail_input irc_ctcp_action ) ],
+        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_tail_input irc_ctcp_action irc_353) ],
     ],
     heap => { irc => $irc },
 );
-
-my $nt = Net::Twitter->new(
-    traits   => [qw/API::RESTv1_1/],
-    consumer_key        => $cfg->{twitter}->{consumer_key},
-    consumer_secret     => $cfg->{twitter}->{consumer_secret},
-    access_token        => $cfg->{twitter}->{token},
-    access_token_secret => $cfg->{twitter}->{token_secret},
-) if defined $cfg->{twitter}->{consumer_key};
 
 $poe_kernel->run();
 
@@ -74,9 +65,24 @@ sub irc_public {
     # handle normal messages in irc channel
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
+
+    # catch commands
+    if ($what =~ /!users/) {
+        $irc->yield( names => $cfg->{irc}->{channel} );
+        $cfg->{irc}->{names_asked} = 1;
+    }
     my $text = "[IRC] $nick: $what\n";
     relay2tel($cfg->{telegram}->{chat_id},$text);
     relay($cfg->{signal}->{infile},$text);
+}
+
+sub irc_msg {
+
+    # handle private messages
+    my ($who, $what) = @_[ARG0, ARG2];
+    my $nick = ( split /!/, $who )[0];
+    # send apologies
+    $irc->yield( 'privmsg', $nick, "Hi, $nick, I don't do private messages, sorry" );
 }
 
 sub irc_ctcp_action {
@@ -94,6 +100,7 @@ sub irc_join {
     # someone joins the channel
     my ($who,$channel) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
+    return if $nick eq $cfg->{irc}->{nick};
     my $text = "[IRC] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
         relay2tel($cfg->{telegram}->{chat_id},$text);
@@ -113,14 +120,59 @@ sub irc_quit {
     }
 }
 
+sub irc_353 {
+
+    # RPL_NAMREPLY
+    my ($names) = @_[ARG1];
+    if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} = 1) {
+        $names =~ s/:(.*)$/$1/;
+        my @users = split / /, $names;
+        my $text = "IRC users: " . (join ', ', @users[2..$#users]) . "\n";
+        $text .= "Telegram users: " . teleusers() . "\n" if defined $cfg->{telegram}->{db};
+        $text .= "Signal users: " . signalusers() . "\n" if defined $cfg->{signal}->{db};
+        print $text;
+        print $dbg $text if $dbg;
+
+        # relay to telegram, signal
+        relay2tel($cfg->{telegram}->{chat_id}, $text) if defined $cfg->{telegram}->{chat_id};
+        relay($cfg->{signal}->{infile}, $text) if defined $cfg->{signal}->{infile};
+
+        # answer on IRC
+        my @lines = split /\n/, $text;
+        for (@lines) {
+            next unless $_;
+
+            # for IRC, split in chunks of maxmsg size if necessary
+            if (defined $cfg->{irc}->{maxmsg} and length $_ > $cfg->{irc}->{maxmsg}) {
+                my $ircmsg = $_;
+                while (my $chunk = substr $ircmsg, 0, $cfg->{irc}->{maxmsg}) {
+                    $irc->yield( privmsg => $cfg->{irc}->{channel} => $chunk );
+                    last if length $ircmsg <= $cfg->{irc}->{maxmsg};
+                }
+            } else {
+                $irc->yield( privmsg => $cfg->{irc}->{channel} => $_ );
+            }
+        }
+        $cfg->{irc}->{names_asked} = 0;
+    }
+}
+
 sub irc_tail_input {
 
     # handle text added to irc->infile
     my ($kernel, $sender, $input) = @_[KERNEL, SENDER, ARG1];
+    next unless $input;
+
+    # check for commands
+    if ($input =~ /!users/) {
+        $irc->yield( names => $cfg->{irc}->{channel} );
+        $cfg->{irc}->{names_asked} = 1;
+    }
     $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, $input );
 }
 
 sub _default {
+
     # This will produce some debug info.
     my ($event, $args) = @_[ARG0 .. $#_];
     my @output = ( "$event: " );
@@ -159,13 +211,35 @@ sub relay {
     close $w;
 }
 
-sub oldstatus {
-    my $id = shift;
+sub teleusers {
 
-    # returns empty string if the insert succeeded
+    # returns list of telegram users as string
+    my $users = '';
     eval {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{twitter}->{db}", "", "", { RaiseError => 1 }, );
-        $dbh->do("insert into status values ($id)");
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{telegram}->{db}", "", "", { RaiseError => 1 }, );
+        my $st = $dbh->prepare("select * from teleusers");
+        $st->execute();
+        while (my $row = $st->fetchrow_hashref()) {
+            $users .= ', ' if $users;
+            $users .= "$row->{first_name}";
+            $users .= " $row->{last_name}" if defined $row->{last_name};
+        }
     };
-    return $@;
+    return $users;
+}
+
+sub signalusers {
+
+    # returns list of signal users as string
+    my $users = '';
+    eval {
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{signal}->{db}", "", "", { RaiseError => 1 }, );
+        my $st = $dbh->prepare("select * from alias");
+        $st->execute();
+        while (my $row = $st->fetchrow_hashref()) {
+            $users .= ', ' if $users;
+            $users .= "$row->{nick}";
+        }
+    };
+    return $users;
 }
