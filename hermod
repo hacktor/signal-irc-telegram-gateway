@@ -131,7 +131,7 @@ sub irc_353 {
         $text .= "Telegram users: " . teleusers() . "\n" if defined $cfg->{telegram}->{db};
         $text .= "Signal users: " . signalusers() . "\n" if defined $cfg->{signal}->{db};
         print $text;
-        print $dbg $text if $dbg;
+        print $dbg $text if defined $dbg;
 
         # relay to telegram, signal
         relay2tel($cfg->{telegram}->{chat_id}, $text) if defined $cfg->{telegram}->{chat_id};
@@ -146,11 +146,12 @@ sub irc_353 {
             if (defined $cfg->{irc}->{maxmsg} and length $_ > $cfg->{irc}->{maxmsg}) {
                 my $ircmsg = $_;
                 while (my $chunk = substr $ircmsg, 0, $cfg->{irc}->{maxmsg}) {
-                    $irc->yield( privmsg => $cfg->{irc}->{channel} => $chunk );
+                    $irc->yield( privmsg => $cfg->{irc}->{channel} => "$chunk" );
                     last if length $ircmsg <= $cfg->{irc}->{maxmsg};
+                    $ircmsg = substr $ircmsg, $cfg->{irc}->{maxmsg};
                 }
             } else {
-                $irc->yield( privmsg => $cfg->{irc}->{channel} => $_ );
+                $irc->yield( privmsg => $cfg->{irc}->{channel} => "$_" );
             }
         }
         $cfg->{irc}->{names_asked} = 0;
