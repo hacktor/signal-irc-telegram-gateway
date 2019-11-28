@@ -16,7 +16,6 @@ use DBI;
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 close $fh;
-open my $dbg, ">>", $cfg->{twitter}->{debug} if defined $cfg->{twitter}->{debug};
 
 my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
 
@@ -50,7 +49,6 @@ sub namepoll {
     eval {
         my $s = $nt->lookup_users({screen_name => $names});
         if (ref $s ne "ARRAY") {
-            print $dbg "lookup_users failed; ref equals " . ref $s . "\n" if defined $dbg;
             return;
         }
         for (@$s) {
@@ -91,11 +89,10 @@ sub namepoll {
                 next if oldstatus($_->{status}->{id});
             }
 
-            print $dbg "$_->{screen_name}: $_->{status}->{id} $_->{status}->{text}\n" if defined $dbg;
             relay($_->{screen_name},$_->{status}->{id},$_->{status}->{text});
         }
     };
-    print $dbg $@ if defined $dbg and $@;
+    print $@ if $@;
 }
 
 sub tagpoll {
@@ -107,7 +104,7 @@ sub tagpoll {
         eval {
             my $s = $nt->search($tag);
             if (ref $s ne "HASH") {
-                print $dbg "search for $tag failed; ref equals " . ref $s . "\n" if defined $dbg;
+                print "search for $tag failed; ref equals " . ref $s . "\n";
                 return;
             }
             next unless defined $s->{statuses} and @{$s->{statuses}};
@@ -134,11 +131,10 @@ sub tagpoll {
                 next if oldstatus($_->{id});
                 next if defined $_->{retweeted_status}->{id} and oldstatus($_->{retweeted_status}->{id});
 
-                print $dbg "$_->{screen_name}: $_->{id} $_->{text}\n" if defined $dbg;
                 relay($_->{user}->{screen_name},$_->{id},$_->{text});
             }
         };
-        print $dbg $@ if defined $dbg and $@;
+        print $@ if $@;
     }
     $cfg->{twitter}->{polled} = 1;
 }
@@ -148,7 +144,6 @@ sub relay {
     my $http = HTTP::Tiny->new( max_redirect => 0 );
     my $url = "https://twitter.com/$name/status/$id\n";
     print $url;
-    print $dbg $url if defined $dbg;
 
     my $telmsg;
     eval { $telmsg = uri_escape($url); };
@@ -167,8 +162,23 @@ sub relay {
 
                 # try to replace t.co short url's.
                 while ($line =~ /(https:\/\/t.co\/[0-9a-zA-Z]{10})/) {
-                    my $resp = $http->get( $1 );
-                    $line =~ s/$1/$resp->{headers}->{location}/ if defined $resp->{headers}->{location};
+                    my $tco = $1;
+                    my $resp = $http->get( $tco );
+                    my $loc = $resp->{headers}->{location} if defined $resp->{headers}->{location};
+                    if (defined $loc and $loc =~ /https:\/\/twitter.com\/i\/web\/status\/[0-9]+/) {
+
+                        # Sooo, we have a 280 char tweet; let's find the expanded url
+                        my $resp2 = $http->get( $loc );
+                        if ($resp2->{success}) {
+                            $resp2->{content} =~ /data-expanded-url="([^"]+)/;
+                            my $eurl = $1;
+                            $line =~ s/$tco/$eurl/ if defined $eurl and $eurl;
+
+                            print "Expanded URL: $eurl\n";
+                        }
+                    } elsif (defined $loc and $loc) {
+                        $line =~ s/$tco/$loc/ if defined $loc;
+                    }
                 }
 
                 print $w decode_entities "[$name] $line\n" if $line;
