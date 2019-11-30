@@ -134,21 +134,12 @@ for (;;) {
         # relay to IRC
         my @lines = split /\n/, $text;
         open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
-        for (@lines) {
-            next unless $_;
-            my $msg = "[Sg] $anonsender: $_\n";
+        for my $msg (@lines) {
+            next unless $msg;
 
-            # for IRC, split in chunks of maxmsg size if necessary 
-            if (defined $cfg->{irc}->{maxmsg} and length $msg > $cfg->{irc}->{maxmsg}) {
-                my $ircmsg = $msg;
-                while (my $chunk = substr $ircmsg, 0, $cfg->{irc}->{maxmsg}) {
-                    print $irc "$chunk\n";
-                    last if length $ircmsg <= $cfg->{irc}->{maxmsg};
-                    $ircmsg = "[Sg] $anonsender: " . substr $ircmsg, $cfg->{irc}->{maxmsg};
-                }
-            } else {
-                print $irc $msg;
-            }
+            # send names to IRC, split lines in chunks of ~maxmsg size if necessary
+            $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
+            print $irc "[Sg] $anonsender: $_\n" for split /\n/, $msg;
         }
         close $irc;
 
