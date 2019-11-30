@@ -115,6 +115,14 @@ for (;;) {
 
                 next;
             }
+        } elsif ($text =~ /^!users/) {
+
+            # user list asked; relay command to hermod
+            open my $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+            print $w "CMD!SIG!users\n";
+            close $w;
+
+            next;
         }
 
         # only relay group messages with contents
@@ -137,7 +145,7 @@ for (;;) {
         for my $msg (@lines) {
             next unless $msg;
 
-            # send names to IRC, split lines in chunks of ~maxmsg size if necessary
+            # send to IRC, split lines in chunks of ~maxmsg size if necessary
             $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
             print $irc "[Sg] $anonsender: $_\n" for split /\n/, $msg;
         }

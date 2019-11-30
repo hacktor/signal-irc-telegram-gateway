@@ -133,12 +133,21 @@ while (my $cgi = CGI::Fast->new) {
             ok("Leaving member: $dj->{message}->{left_chat_member}->{first_name}\n");
         }
 
+        # look for commands
+        if ($text =~ /!users/) {
+
+            # user list asked; relay command to hermod
+            print $irc "CMD!TEL!users\n";
+
+            ok("!users command relayed for $first $last\n");
+        }
+
         # split lines and write to logs for signal and irc
         my @lines = split /\n/, $text;
         for my $msg (@lines) {
             next unless $msg;
 
-            # send names to IRC, split lines in chunks of ~maxmsg size if necessary
+            # send to IRC, split lines in chunks of ~maxmsg size if necessary
             $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
             print $irc "[Tg] $first $last $_\n" for split /\n/, $msg;
         
