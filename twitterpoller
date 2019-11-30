@@ -161,7 +161,7 @@ sub relay {
             for my $line (split /\n/, $text) {
 
                 # try to replace t.co short url's.
-                while ($line =~ /(https:\/\/t.co\/[0-9a-zA-Z]{10})/) {
+                while ($line =~ /(https:\/\/t.co\/[0-9a-zA-Z]{10,})/) {
                     my $tco = $1;
                     my $resp = $http->get( $tco );
                     my $loc = $resp->{headers}->{location} if defined $resp->{headers}->{location};
@@ -177,7 +177,7 @@ sub relay {
                             print "Expanded URL: $eurl\n";
                         }
                     } elsif (defined $loc and $loc) {
-                        $line =~ s/$tco/$loc/ if defined $loc;
+                        $line =~ s/$tco/$loc/;
                     }
                 }
 
