@@ -148,8 +148,12 @@ while (my $cgi = CGI::Fast->new) {
             next unless $msg;
 
             # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-            print $irc "[Tg] $first $last $_\n" for split /\n/, $msg;
+            if (length $msg > $cfg->{irc}->{maxmsg}) {
+                $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                print $irc "[Tg] $first $last $_\n" for split /\n/, $msg;
+            } else {
+                print $irc "[Tg] $first $last $msg\n";
+            }
         
             # skip documents, photo's. they've been sent already.
             next if $msg =~ /\*\* sends /;

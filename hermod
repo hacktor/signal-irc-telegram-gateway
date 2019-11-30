@@ -72,8 +72,12 @@ sub irc_public {
 
         # send names to IRC, split lines in chunks of ~maxmsg size if necessary
         for my $text (teleusers(),signalusers()) {
-            $text =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-            $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$_" ) for split /\n/, $text;
+            if (length $text > $cfg->{irc}->{maxmsg}) {
+                $text =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$_" ) for split /\n/, $text;
+            } else {
+                $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
+            }
         }
         return;
     }
