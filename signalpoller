@@ -226,5 +226,5 @@ sub notify {
     my $err = shift;
 
     # filters here
-    qx( $cfg->{main}->{notify} "$err" ) if defined $cfg->{common}->{notify};
+    qx( $cfg->{common}->{notify} "$err" ) if defined $cfg->{common}->{notify};
 }
