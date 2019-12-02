@@ -16,6 +16,9 @@ Make a copy of the file hermod.json.example to /etc/hermod.json and change value
 appropriately
 ```json
 {       
+    "common": {
+        "notify": "/home/hermod/bin/notify.pl"
+    },
     "signal": {
         "phone": "+316xxxxxxxxxx",
         "gid": "XXXXXXXXXXXXXXXXXXXXX==",

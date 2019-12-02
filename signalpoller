@@ -45,18 +45,26 @@ for (;;) {
     my $msg ='';
     while (my $line = <$tail>) {
         if ($line =~ /^FILE:/) {
+
             # send photo's, documents
             $line = substr $line,5;
             my ($file,$caption) = split / /, $line, 2; 
-            qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -g $cfg->{signal}->{gid} -m "$caption" -a $cfg->{telegram}->{attachments}/$file );
+            my ($out, $err, $ret) = tee {
+                system($cfg->{signal}->{cli},"-u",$cfg->{signal}->{phone},"send","-g",$cfg->{signal}->{gid},
+                        "-m","$caption","-a","$cfg->{telegram}->{attachments}/$file");
+            };
+            print $dbg $out, $err if defined $dbg;
+            notify($err) if $err;
         } else {
             $msg .= $line."\n";
         }
     }
     if ($msg) {
-        open my $sc, "|-", $cfg->{signal}->{cli}, "-u", $cfg->{signal}->{phone}, "send", "-g", $cfg->{signal}->{gid};
-        print $sc $msg;
-        close $sc;
+        my ($out, $err, $ret) = tee {
+            system($cfg->{signal}->{cli},"-u",$cfg->{signal}->{phone},"send","-g", $cfg->{signal}->{gid}, "-m", "$msg");
+        };
+        print $dbg $out, $err if defined $dbg;
+        notify($err) if $err;
     }
 
     # now poll the signal group for new messages
@@ -65,6 +73,8 @@ for (;;) {
         system($cfg->{signal}->{cli},"-u",$cfg->{signal}->{phone},"receive","--json");
     };
     print $dbg $out, $err if defined $dbg;
+    notify($err) if $err;
+
     my @lines = split /\n/, $out;
     for my $line (@lines) {
         my $sigmsg = $json->decode($line);
@@ -205,6 +215,16 @@ sub nickhelp {
     my ($cfg,$phone,$nick) = @_;
     my $text = 'You do not have a nickname set. You are now known as '.$nick;
     $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
-    my $out = qx( $cfg->{signal}->{cli} -u $cfg->{signal}->{phone} send -m "$text" $phone );
-    print $dbg $out if defined $dbg;
+    my ($out, $err, $ret) = tee {
+        system($cfg->{signal}->{cli},"-u",$cfg->{signal}->{phone},"send","-m","$text",$phone);
+    };
+    print $dbg $out, $err if defined $dbg;
+    notify($err) if $err;
+}
+
+sub notify {
+    my $err = shift;
+
+    # filters here
+    qx( $cfg->{main}->{notify} "$err" ) if defined $cfg->{common}->{notify};
 }
