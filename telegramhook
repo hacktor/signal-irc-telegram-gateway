@@ -142,7 +142,7 @@ while (my $cgi = CGI::Fast->new) {
             ok("!users command relayed for $first $last\n");
         }
 
-        # split lines and write to logs for signal and irc
+        # split lines and write to log for irc
         my @lines = split /\n/, $text;
         for my $msg (@lines) {
             next unless $msg;
@@ -154,11 +154,11 @@ while (my $cgi = CGI::Fast->new) {
             } else {
                 print $irc "[Tg] $first $last $msg\n";
             }
-        
-            # skip documents, photo's. they've been sent already.
-            next if $msg =~ /\*\* sends /;
-            print $sig "[Tg] $first $last: $msg";
         }
+
+        # for signal, skip documents, photo's. they've been sent already.
+        next if $text =~ /\*\* sends /;
+        print $sig "[Tg] $first $last: $text";
     }
     ok();
 }
