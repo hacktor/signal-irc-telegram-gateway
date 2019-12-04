@@ -170,11 +170,14 @@ sub relay {
                         # Sooo, we have a 280 char tweet; let's find the expanded url
                         my $resp2 = $http->get( $loc );
                         if ($resp2->{success}) {
-                            $resp2->{content} =~ /data-expanded-url="([^"]+)/;
+
+                            # extract expanded url from html; discard url's in user profile
+                            my @urls = grep !/ProfileHeaderCard/, (grep /ata-expanded-url=/, (split /\n/, $resp2->{content}));
+                            $urls[0] =~ m/data-expanded-url="([^"]+)/;
                             my $eurl = $1;
                             $line =~ s/$tco/$eurl/ if defined $eurl and $eurl;
 
-                            print "Expanded URL: $eurl\n";
+                            print "Expanded URL: $eurl\n" if defined $eurl and $eurl;
                         }
                     } elsif (defined $loc and $loc) {
                         $line =~ s/$tco/$loc/;
