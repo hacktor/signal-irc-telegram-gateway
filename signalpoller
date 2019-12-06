@@ -224,7 +224,20 @@ sub nickhelp {
 
 sub notify {
     my $err = shift;
+    my $msg = '';
 
     # filters here
-    qx( $cfg->{common}->{notify} "$err" ) if defined $cfg->{common}->{notify};
+    if ($err =~ /Failed to send \(some\) messages:/) {
+        while ($err =~ /Unregistered user (\+[\d]+): null/g) {
+            unless (defined $cfg->{signal}->{unreg}->{$1}) {
+                $cfg->{signal}->{unreg}->{$1} = 1;
+                $msg .= " $1";
+            }
+        }
+        $msg = "Unregistered users: $msg\n" if $msg;
+    } else {
+        $msg = $err;
+    }
+
+    qx( $cfg->{common}->{notify} "$msg" ) if defined $cfg->{common}->{notify} and $msg;
 }
