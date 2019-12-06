@@ -157,7 +157,7 @@ while (my $cgi = CGI::Fast->new) {
         }
 
         # for signal, skip documents, photo's. they've been sent already.
-        print $sig "[Tg] $first $last: $text" unless $text =~ /\*\* sends /;
+        print $sig "[Tg] $first $last: $text\n" unless $text =~ /\*\* sends /;
     }
     ok();
 }
