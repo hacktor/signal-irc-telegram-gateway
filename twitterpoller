@@ -143,7 +143,6 @@ sub relay {
     my ($name,$id,$text) = @_;
     my $http = HTTP::Tiny->new( max_redirect => 0 );
     my $url = "https://twitter.com/$name/status/$id\n";
-    print $url;
 
     my $telmsg;
     eval { $telmsg = uri_escape($url); };
@@ -151,13 +150,14 @@ sub relay {
     my $chat_id = (defined $cfg->{twitter}->{chat_id}) ? $cfg->{twitter}->{chat_id} : $cfg->{telegram}->{chat_id};
 
     HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
+    print "To telegram: $url";
 
     # the twitter chat_id is supposedly linked to the telegram group
     # write to files to irc, signal unless twitter->chat_id and telegram->forward are defined
     unless (defined $cfg->{twitter}->{chat_id} and defined $cfg->{telegram}->{forward}) {
         for my $file ($cfg->{irc}->{infile}, $cfg->{signal}->{infile}) {
             open my $w, ">>:utf8", $file;
-            print $w "[$name] $url\n";
+            print $w "[$name] $url";
             for my $line (split /\n/, $text) {
 
                 # try to replace t.co short url's.

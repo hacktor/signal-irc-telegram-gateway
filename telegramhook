@@ -62,7 +62,7 @@ while (my $cgi = CGI::Fast->new) {
             $doc = @{$dj->{message}->{photo}}[-1];
             $type = 'photo';
         }
-        foreach my $t ('voice', 'audio', 'document') { 
+        foreach my $t ('voice', 'audio', 'document', 'video') { 
             if (defined $dj->{message}->{$t}) {
                 $doc = $dj->{message}->{$t};
                 $type = $t;
