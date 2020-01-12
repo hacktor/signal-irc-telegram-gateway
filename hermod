@@ -33,7 +33,7 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_tail_input irc_ctcp_action irc_353) ],
+        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_nick irc_tail_input irc_ctcp_action irc_353) ],
     ],
     heap => { irc => $irc },
 );
@@ -116,6 +116,16 @@ sub irc_ctcp_action {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
     my $text = "[IRC] ***$nick $what\n";
+    relay2tel($cfg->{telegram}->{chat_id},$text);
+    relay($cfg->{signal}->{infile},$text);
+}
+
+sub irc_nick {
+
+    # handle /nick events
+    my ($whowas,$who) = @_[ARG0, ARG1];
+    my $nick = ( split /!/, $whowas )[0];
+    my $text = "[IRC] $nick is now known as $who\n";
     relay2tel($cfg->{telegram}->{chat_id},$text);
     relay($cfg->{signal}->{infile},$text);
 }
