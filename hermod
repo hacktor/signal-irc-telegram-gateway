@@ -17,8 +17,10 @@ open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 close $fh;
 open my $dbg, ">>", $cfg->{irc}->{debug} if defined $cfg->{irc}->{debug};
+my $tel = $cfg->{telegram} if defined $cfg->{telegram};
+my $sig = $cfg->{signal} if defined $cfg->{signal};
 
-my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
+my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
 
 # We create a new PoCo-IRC object
 my $irc = POE::Component::IRC->spawn(
@@ -72,6 +74,7 @@ sub irc_public {
 
         # send names to IRC, split lines in chunks of ~maxmsg size if necessary
         for my $text (teleusers(),signalusers()) {
+            next unless $text;
             if (length $text > $cfg->{irc}->{maxmsg}) {
                 $text =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
                 $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$_" ) for split /\n/, $text;
@@ -83,8 +86,8 @@ sub irc_public {
     }
 
     my $text = "[IRC] $nick: $what\n";
-    relay2tel($cfg->{telegram}->{chat_id},$text);
-    relay($cfg->{signal}->{infile},$text);
+    relay2tel($tel->{chat_id},$text) if defined $tel;
+    relay($sig->{infile},$text) if defined $sig;
 }
 
 sub irc_msg {
@@ -96,6 +99,7 @@ sub irc_msg {
 
         # send names to nick, split lines in chunks of ~maxmsg size if necessary
         for my $text (teleusers(),signalusers()) {
+            next unless $text;
             if (length $text > $cfg->{irc}->{maxmsg}) {
                 $text =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
                 $irc->yield( 'privmsg', $nick, "$_" ) for split /\n/, $text;
@@ -116,8 +120,8 @@ sub irc_ctcp_action {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
     my $text = "[IRC] ***$nick $what\n";
-    relay2tel($cfg->{telegram}->{chat_id},$text);
-    relay($cfg->{signal}->{infile},$text);
+    relay2tel($tel->{chat_id},$text) if defined $tel;
+    relay($sig->{infile},$text) if defined $sig;
 }
 
 sub irc_nick {
@@ -126,8 +130,8 @@ sub irc_nick {
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[IRC] $nick is now known as $who\n";
-    relay2tel($cfg->{telegram}->{chat_id},$text);
-    relay($cfg->{signal}->{infile},$text);
+    relay2tel($tel->{chat_id},$text) if defined $tel;
+    relay($sig->{infile},$text) if defined $sig;
 }
 
 sub irc_join {
@@ -138,8 +142,8 @@ sub irc_join {
     return if $nick eq $cfg->{irc}->{nick};
     my $text = "[IRC] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
-        relay2tel($cfg->{telegram}->{chat_id},$text);
-        relay($cfg->{signal}->{infile},$text);
+        relay2tel($tel->{chat_id},$text) if defined $tel;
+        relay($sig->{infile},$text) if defined $sig;
     }
 }
 
@@ -150,8 +154,8 @@ sub irc_quit {
     my $nick = ( split /!/, $who )[0];
     my $text = "[IRC] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
-        relay2tel($cfg->{telegram}->{chat_id},$text);
-        relay($cfg->{signal}->{infile},$text);
+        relay2tel($tel->{chat_id},$text) if defined $tel;
+        relay($sig->{infile},$text)if defined $sig;
     }
 }
 
@@ -164,11 +168,11 @@ sub irc_353 {
     my $text = "IRC users: " . (join ', ', @users[2..$#users]) . "\n";
 
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
-        $text .= "Signal users: " . signalusers() . "\n" if defined $cfg->{signal}->{db};
-        relay2tel($cfg->{telegram}->{chat_id},$text);
+        $text .= "Signal users: " . signalusers() . "\n" if defined $sig->{db};
+        relay2tel($tel->{chat_id},$text) if defined $tel;
     } elsif (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'SIG') {
-        $text .= "Telegram users: " . teleusers() . "\n" if defined $cfg->{telegram}->{db};
-        relay($cfg->{signal}->{infile},$text);
+        $text .= "Telegram users: " . teleusers() . "\n" if defined $tel->{db};
+        relay($sig->{infile},$text) if defined $sig;
     }
 }
 
@@ -236,8 +240,9 @@ sub teleusers {
 
     # returns list of telegram users as string
     my $users = '';
+    return $users unless defined $tel;
     eval {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{telegram}->{db}", "", "", { RaiseError => 1 }, );
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$tel->{db}", "", "", { RaiseError => 1 }, );
         my $st = $dbh->prepare("select * from teleusers");
         $st->execute();
         while (my $row = $st->fetchrow_hashref()) {
@@ -253,8 +258,9 @@ sub signalusers {
 
     # returns list of signal users as string
     my $users = '';
+    return $users unless defined $sig;
     eval {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{signal}->{db}", "", "", { RaiseError => 1 }, );
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$sig->{db}", "", "", { RaiseError => 1 }, );
         my $st = $dbh->prepare("select * from alias");
         $st->execute();
         while (my $row = $st->fetchrow_hashref()) {
