@@ -28,6 +28,8 @@ unless (defined $cfg->{signal}->{phone} and defined $cfg->{signal}->{cli} and
 my $sig = $cfg->{signal};
 $cfg->{nicks} = getalias($sig);
 open my $dbg, ">>", $sig->{debug} if defined $sig->{debug};
+my $tel = $cfg->{telegram} if defined $cfg->{telegram};
+my $irc = $cfg->{irc} if defined $cfg->{irc};
 
 # tailing signal infile and telegram downloads for stuff to send
 open my $tail, "<", $sig->{infile} or die @_;
@@ -51,14 +53,14 @@ for (;;) {
     my $msg ='';
     while (my $line = <$tail>) {
 
-        if ($line =~ /^FILE:/ and defined $cfg->{telegram}->{attachments}) {
+        if ($line =~ /^FILE:/ and defined $tel->{attachments}) {
 
             # send photo's, documents
             $line = substr $line,5;
             my ($file,$caption) = split / /, $line, 2; 
             my ($out, $err, $ret) = tee {
                 system($sig->{cli},"-u",$sig->{phone},"send","-g",$sig->{gid},
-                        "-m","$caption","-a","$cfg->{telegram}->{attachments}/$file");
+                        "-m","$caption","-a","$tel->{attachments}/$file");
             };
             print $dbg $out, $err if defined $dbg;
             notify($err) if $err;
@@ -132,10 +134,10 @@ for (;;) {
                     close $w;
                 }
 
-                if (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
+                if (defined $tel->{token} and defined $tel->{chat_id}) {
 
                     # notify the telegram group
-                    my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
+                    my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
                     my $telmsg;
                     eval { $telmsg = uri_escape($text); };
                     $telmsg = uri_escape_utf8($text) if $@;
@@ -148,7 +150,7 @@ for (;;) {
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            open my $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
             print $w "CMD!SIG!users\n";
             close $w;
 
@@ -159,10 +161,11 @@ for (;;) {
         next unless $group eq $sig->{gid};
         next unless $text or $attach;
 
-        # relay to telegram
-        my $telmsg;
-        my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage?chat_id=$cfg->{telegram}->{chat_id}&text=";
-        if ($text) {
+        if (defined $tel->{token} and defined $tel->{chat_id}) {
+
+            # relay to telegram
+            my $telmsg;
+            my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
             eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
             $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
             my $response = HTTP::Tiny->new->get( "$URL$telmsg" );
@@ -171,19 +174,19 @@ for (;;) {
 
         # relay to IRC
         my @lines = split /\n/, $text;
-        open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+        open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
         for my $msg (@lines) {
             next unless $msg;
 
             # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            if (length $msg > $cfg->{irc}->{maxmsg}) {
-                $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $irc "[Sg] $anonsender: $_\n" for split /\n/, $msg;
+            if (length $msg > $irc->{maxmsg}) {
+                $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                print $w "[Sg] $anonsender: $_\n" for split /\n/, $msg;
             } else {
-                print $irc "[Sg] $anonsender: $msg\n";
+                print $w "[Sg] $anonsender: $msg\n";
             }
         }
-        close $irc;
+        close $w;
 
         # relay optional attachments
         foreach my $att (@$attach) {
@@ -192,11 +195,11 @@ for (;;) {
             my $ua = LWP::UserAgent->new;
             rename "$sig->{attachments}/$att->{id}", "$sig->{attachments}/$att->{id}.$ext";
             if ($att->{contentType} =~ /image/) {
-                $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendPhoto";
+                $URL = "https://api.telegram.org/bot$tel->{token}/sendPhoto";
                 $type = 'photo';
                 $msg = "[Sg] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
             } else {
-                $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendDocument";
+                $URL = "https://api.telegram.org/bot$tel->{token}/sendDocument";
                 $type = 'document';
                 $msg = "[Sg] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
             }
