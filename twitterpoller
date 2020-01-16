@@ -17,28 +17,30 @@ open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 close $fh;
 
-my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
+my $twit = $cfg->{twitter} if defined $cfg->{twitter};
+my $tele = $cfg->{telegram} if defined $cfg->{telegram};
+my $URL = "https://api.telegram.org/bot$tele->{token}/sendMessage";
 
-die "Missing consumer key" unless defined $cfg->{twitter}->{consumer_key};
-die "Missing consumer secret" unless defined $cfg->{twitter}->{consumer_secret};
-die "Missing token" unless defined $cfg->{twitter}->{token};
-die "Missing token secret" unless defined $cfg->{twitter}->{token_secret};
-die "No names or tags defined" unless defined $cfg->{twitter}->{screen_names} or defined $cfg->{twitter}->{tags};
-die "No chat_id defined" unless defined $cfg->{twitter}->{chat_id} or defined $cfg->{telegram}->{chat_id};
+die "Missing consumer key" unless defined $twit->{consumer_key};
+die "Missing consumer secret" unless defined $twit->{consumer_secret};
+die "Missing token" unless defined $twit->{token};
+die "Missing token secret" unless defined $twit->{token_secret};
+die "No names or tags defined" unless defined $twit->{screen_names} or defined $twit->{tags};
+die "No chat_id defined" unless defined $twit->{chat_id} or defined $tele->{chat_id};
 
 my $nt = Net::Twitter->new(
     traits   => [qw/API::RESTv1_1/],
-    consumer_key        => $cfg->{twitter}->{consumer_key},
-    consumer_secret     => $cfg->{twitter}->{consumer_secret},
-    access_token        => $cfg->{twitter}->{token},
-    access_token_secret => $cfg->{twitter}->{token_secret},
-) if defined $cfg->{twitter}->{consumer_key};
+    consumer_key        => $twit->{consumer_key},
+    consumer_secret     => $twit->{consumer_secret},
+    access_token        => $twit->{token},
+    access_token_secret => $twit->{token_secret},
+) if defined $twit->{consumer_key};
 
 # main loop
 while (1) {
-    namepoll($cfg->{twitter}->{screen_names}) if defined $cfg->{twitter}->{screen_names} and @{$cfg->{twitter}->{screen_names}};
-    tagpoll($cfg->{twitter}->{tags}) if defined $cfg->{twitter}->{tags} and @{$cfg->{twitter}->{tags}};
-    my $tick = (defined $cfg->{twitter}->{tick}) ? $cfg->{twitter}->{tick} : 300;
+    namepoll($twit->{screen_names}) if defined $twit->{screen_names} and @{$twit->{screen_names}};
+    tagpoll($twit->{tags}) if defined $twit->{tags} and @{$twit->{tags}};
+    my $tick = (defined $twit->{tick}) ? $twit->{tick} : 300;
     sleep $tick;
 }
 
@@ -54,33 +56,33 @@ sub namepoll {
         for (@$s) {
 
             # remember names and id's
-            unless (defined $cfg->{twitter}->{$_->{screen_name}}) {
-                $cfg->{twitter}->{$_->{screen_name}} = 1;
-                $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1
+            unless (defined $twit->{$_->{screen_name}}) {
+                $twit->{$_->{screen_name}} = 1;
+                $twit->{ids}->{$_->{status}->{id}} = 1
                     if defined $_->{status}->{id};
                 next;
             }
 
             next if defined $_->{status}->{id} and $_->{status}->{id} =~ /^\d+$/ and
-                    defined $cfg->{twitter}->{ids}->{$_->{status}->{id}};
-            $cfg->{twitter}->{ids}->{$_->{status}->{id}} = 1
+                    defined $twit->{ids}->{$_->{status}->{id}};
+            $twit->{ids}->{$_->{status}->{id}} = 1
                  if defined $_->{status}->{id};
 
             next if defined $_->{status}->{retweeted_status}->{id} and
                     $_->{status}->{retweeted_status}->{id} =~ /^\d+$/ and
-                    defined $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}};
-            $cfg->{twitter}->{ids}->{$_->{status}->{retweeted_status}->{id}} = 1
+                    defined $twit->{ids}->{$_->{status}->{retweeted_status}->{id}};
+            $twit->{ids}->{$_->{status}->{retweeted_status}->{id}} = 1
                  if defined $_->{status}->{retweeted_status}->{id};
 
             # skip replies if noreply is defined
             next if defined $_->{status}->{in_reply_to_status_id} and
                     $_->{status}->{in_reply_to_status_id} =~ /^\d+$/ and
-                    defined $cfg->{twitter}->{noreply};
+                    defined $twit->{noreply};
 
             # skip retweets if noretweet is defined
             next if defined $_->{status}->{retweeted_status}->{id} and
                     $_->{status}->{retweeted_status}->{id} =~ /^\d+$/ and
-                    defined $cfg->{twitter}->{noretweet};
+                    defined $twit->{noretweet};
 
             # new tweet or retweet detected, check if they are really new
             if (defined $_->{status}->{retweeted_status}->{id}) {
@@ -113,20 +115,20 @@ sub tagpoll {
 
                 # filter known id's
                 next unless defined $_->{id};
-                next if defined $cfg->{twitter}->{ids}->{$_->{id}};
-                $cfg->{twitter}->{ids}->{$_->{id}} = 1;
+                next if defined $twit->{ids}->{$_->{id}};
+                $twit->{ids}->{$_->{id}} = 1;
                 next if defined $_->{retweeted_status}->{id} and
-                        defined $cfg->{twitter}->{ids}->{$_->{retweeted_status}->{id}};
-                $cfg->{twitter}->{ids}->{$_->{retweeted_status}->{id}} = 1;
+                        defined $twit->{ids}->{$_->{retweeted_status}->{id}};
+                $twit->{ids}->{$_->{retweeted_status}->{id}} = 1;
 
                 # skip if this is the first round of polling
-                next unless defined $cfg->{twitter}->{polled};
+                next unless defined $twit->{polled};
 
                 next if defined $_->{in_reply_to_status_id} and
-                        defined $cfg->{twitter}->{noreply};
+                        defined $twit->{noreply};
 
                 next if defined $_->{retweeted_status}->{id} and
-                        defined $cfg->{twitter}->{noretweet};
+                        defined $twit->{noretweet};
 
                 next if oldstatus($_->{id});
                 next if defined $_->{retweeted_status}->{id} and oldstatus($_->{retweeted_status}->{id});
@@ -136,7 +138,7 @@ sub tagpoll {
         };
         print $@ if $@;
     }
-    $cfg->{twitter}->{polled} = 1;
+    $twit->{polled} = 1;
 }
 
 sub relay {
@@ -144,18 +146,25 @@ sub relay {
     my $http = HTTP::Tiny->new( max_redirect => 0 );
     my $url = "https://twitter.com/$name/status/$id\n";
 
-    my $telmsg;
-    eval { $telmsg = uri_escape($url); };
-    $telmsg = uri_escape_utf8($url) if $@;
-    my $chat_id = (defined $cfg->{twitter}->{chat_id}) ? $cfg->{twitter}->{chat_id} : $cfg->{telegram}->{chat_id};
+    my $chat_id = (defined $twit->{chat_id}) ? $twit->{chat_id} : $tele->{chat_id};
+    if (defined $chat_id) {
 
-    HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
-    print "To telegram: $url";
+        # relay to telegram
+        my $telmsg;
+        eval { $telmsg = uri_escape($url); };
+        $telmsg = uri_escape_utf8($url) if $@;
+
+        HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
+        print "To telegram: $url";
+    }
 
     # the twitter chat_id is supposedly linked to the telegram group
     # write to files to irc, signal unless twitter->chat_id and telegram->forward are defined
-    unless (defined $cfg->{twitter}->{chat_id} and defined $cfg->{telegram}->{forward}) {
-        for my $file ($cfg->{irc}->{infile}, $cfg->{signal}->{infile}) {
+    unless (defined $twit->{chat_id} and defined $tele->{forward}) {
+        my @infiles;
+        push @infiles, $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
+        push @infiles, $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
+        for my $file (@infiles) {
             open my $w, ">>:utf8", $file;
             print $w "[$name] $url";
             for my $line (split /\n/, $text) {
@@ -197,7 +206,7 @@ sub oldstatus {
 
     # returns empty string if the insert succeeded
     eval {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{twitter}->{db}", "", "", { RaiseError => 1 }, );
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$twit->{db}", "", "", { RaiseError => 1 }, );
         $dbh->do("insert into status values ($id)");
     };
     return $@;
