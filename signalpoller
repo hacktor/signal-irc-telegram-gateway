@@ -205,7 +205,7 @@ for (;;) {
             }
             $ua->post($URL, Content_Type => 'form-data',
                                  Content => { $type => ["$sig->{attachments}/$att->{id}.$ext"],
-                                              chat_id => $cfg->{telegram}->{chat_id},
+                                              chat_id => $tel->{chat_id},
                                               caption => "[Sg $ext $type sent by $anonsender]"},);
             open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
             print $irc $msg;

@@ -24,30 +24,29 @@ open my $irc, '>>:utf8', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}
 open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
 open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
+unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
+    print CGI->header(-type => 'application/json');
+    print '{"ok": false, "status": 500, "error": "token or chat_id undefined"}'."\n\n";
+    exit;
+}
+my $tel = $cfg->{telegram};
+
 # bots cannot get a list of group members, so we keep a database
-my $dbh = DBI->connect("dbi:SQLite:dbname=$cfg->{telegram}->{db}", "", "", { RaiseError => 1 }, )
-        if defined $cfg->{telegram}->{db};
+my $dbh = DBI->connect("dbi:SQLite:dbname=$tel->{db}", "", "", { RaiseError => 1 }, )
+        if defined $tel->{db};
 my $st_ins = $dbh->prepare("insert into teleusers (id,first_name,last_name,username,is_bot) values (?,?,?,?,?)")
         if defined $dbh;
 my $st_del = $dbh->prepare("delete from teleusers where id = ?")
         if defined $dbh;
 
-sub ok {
-    my $msg = shift;
-    print $dbg $msg if defined $msg and defined $dbg;
-    print CGI->header(-type => 'application/json');
-    print '{"ok": true, "status": 200}'."\n\n";
-    exit;
-}
-
 while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
     my $dj = decode_json( $body );
     
-    print $dbg "$body\n" if defined $cfg->{telegram}->{debug};
+    print $dbg "$body\n" if defined $dbg;
     
     # check type of msg and chat_id
-    if (defined $dj->{message}->{chat}->{id} and $dj->{message}->{chat}->{id} == $cfg->{telegram}->{chat_id}) {
+    if (defined $dj->{message}->{chat}->{id} and $dj->{message}->{chat}->{id} == $tel->{chat_id}) {
     
         my $user_id = (defined $dj->{message}->{from}->{id} and $dj->{message}->{from}->{id} =~ /^\d+$/) ?
             $dj->{'message'}->{'from'}->{id} : 0;
@@ -72,16 +71,16 @@ while (my $cgi = CGI::Fast->new) {
         if (defined $doc->{file_id}) {
 
             # download the file
-            my $response = HTTP::Tiny->new->get( "https://api.telegram.org/bot$cfg->{telegram}->{token}/getFile?file_id=$doc->{file_id}" );
+            my $response = HTTP::Tiny->new->get( "https://api.telegram.org/bot$tel->{token}/getFile?file_id=$doc->{file_id}" );
             if ($response->{success}) {
                 my $djfile = decode_json( $response->{content} );
                 my $path = $djfile->{result}->{file_path};
                 (my $file = $path) =~ s#.*/##;
                 my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
-                qx( wget -O $cfg->{telegram}->{attachments}/$file https://api.telegram.org/file/bot$cfg->{telegram}->{token}/$path >/dev/null 2>&1 );
+                qx( wget -O $tel->{attachments}/$file https://api.telegram.org/file/bot$tel->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
                     print $sig "FILE:$file [sent by $first $last on telegram] $caption\n";
-                    $text = "** sends $type: $cfg->{telegram}->{url}/$file";
+                    $text = "** sends $type: $tel->{url}/$file";
                     $text .= " with caption: $caption" if $caption;
                 } else {
                     print $dbg "Error getting $type $name $file\n";
@@ -96,7 +95,7 @@ while (my $cgi = CGI::Fast->new) {
             $dj->{message}->{reply_to_message}->{text};
         
         # is the message forwarded from another channel?
-        if (defined $dj->{message}->{forward_from_chat} and defined $cfg->{telegram}->{forward}) {
+        if (defined $dj->{message}->{forward_from_chat} and defined $tel->{forward}) {
 
             $text = "[$dj->{message}->{forward_from_chat}->{title}]: $dj->{message}->{text}\n";
             print $irc $text;
@@ -161,3 +160,12 @@ while (my $cgi = CGI::Fast->new) {
     }
     ok();
 }
+
+sub ok {
+    my $msg = shift;
+    print $dbg $msg if defined $msg and defined $dbg;
+    print CGI->header(-type => 'application/json');
+    print '{"ok": true, "status": 200}'."\n\n";
+    exit;
+}
+
