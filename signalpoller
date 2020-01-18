@@ -63,7 +63,7 @@ for (;;) {
                         "-m","$caption","-a","$tel->{attachments}/$file");
             };
             print $dbg $out, $err if defined $dbg;
-            notify($err) if $err;
+            errorsend($err) if $err;
         } else {
             $msg .= $line;
         }
@@ -74,7 +74,7 @@ for (;;) {
             system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", "$msg");
         };
         print $dbg $out, $err if defined $dbg;
-        notify($err) if $err;
+        errorsend($err) if $err;
     }
 
     # now poll the signal group for new messages
@@ -83,7 +83,7 @@ for (;;) {
         system($sig->{cli},"-u",$sig->{phone},"receive","--json");
     };
     print $dbg $out, $err if defined $dbg;
-    notify($err) if $err;
+    errorsend($err) if $err;
 
     my @lines = split /\n/, $out;
     for my $line (@lines) {
@@ -242,12 +242,13 @@ sub nickhelp {
         system($sig->{cli},"-u",$sig->{phone},"send","-m","$text",$phone);
     };
     print $dbg $out, $err if defined $dbg;
-    notify($err) if $err;
+    errorsend($err) if $err;
 }
 
-sub notify {
+sub errorsend {
     my $err = shift;
     my $msg = '';
+    my $hostname = qx( hostname ); chomp $hostname;
 
     # filters here
     if ($err =~ /Failed to send \(some\) messages:/) {
@@ -262,5 +263,5 @@ sub notify {
         $msg = $err;
     }
 
-    qx( $cfg->{common}->{notify} "$msg" ) if defined $cfg->{common}->{notify} and $msg;
+    qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
 }
