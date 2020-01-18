@@ -17,7 +17,7 @@ appropriately
 ```json
 {       
     "common": {
-        "notify": "/home/hermod/bin/notify.pl"
+        "errorsend": "/home/hermod/bin/notify.pl"
     },
     "signal": {
         "phone": "+316xxxxxxxxxx",
