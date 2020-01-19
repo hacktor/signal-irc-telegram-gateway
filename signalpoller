@@ -26,7 +26,7 @@ unless (defined $cfg->{signal}->{phone} and defined $cfg->{signal}->{cli} and
     sleep; exit;
 }
 my $sig = $cfg->{signal};
-$cfg->{nicks} = getalias($sig);
+$sig->{nicks} = getalias($sig);
 open my $dbg, ">>", $sig->{debug} if defined $sig->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
@@ -100,23 +100,23 @@ for (;;) {
 
         # anonymize sender telephone
         my $anonsender = $sender;
-        if (defined $cfg->{nicks}->{$sender}) {
+        if (defined $sig->{nicks}->{$sender}) {
 
-            $anonsender = $cfg->{nicks}->{$sender};
+            $anonsender = $sig->{nicks}->{$sender};
         } else {
 
             $anonsender =~ s/.*(\d\d\d\d)$/$sig->{anon}-$1/;
-            $cfg->{nicks}->{$sender} = $anonsender;
-            nickhelp($cfg,$sender,$anonsender);
-            setalias($cfg,$sender,$anonsender);
+            $sig->{nicks}->{$sender} = $anonsender;
+            nickhelp($sig,$sender,$anonsender);
+            setalias($sig,$sender,$anonsender);
         }
 
         # check for setnick command
         if ($text =~ /^!setnick/) {
             (my $nick = $text) =~ s/^!setnick ([\w]+).*$/$1/;
             if ($nick) {
-                setalias($cfg,$sender,$nick);
-                $cfg->{nicks}->{$sender} = $nick;
+                setalias($sig,$sender,$nick);
+                $sig->{nicks}->{$sender} = $nick;
                 $text = "$anonsender is now known as $nick\n";
 
                 # notify the signal group
@@ -126,10 +126,10 @@ for (;;) {
 
                 $text = "[Sg] $text";
 
-                if (defined $cfg->{irc}->{infile}) {
+                if (defined $irc->{infile}) {
 
                     # notify the irc chat
-                    open $w, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+                    open $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
                     print $w "$text";
                     close $w;
                 }
@@ -150,7 +150,7 @@ for (;;) {
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
+            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
             print $w "CMD!SIG!users\n";
             close $w;
 
@@ -207,9 +207,9 @@ for (;;) {
                                  Content => { $type => ["$sig->{attachments}/$att->{id}.$ext"],
                                               chat_id => $tel->{chat_id},
                                               caption => "[Sg $ext $type sent by $anonsender]"},);
-            open my $irc, ">>", $cfg->{irc}->{infile} or die "Died opening irc infile $cfg->{irc}->{infile}";
-            print $irc $msg;
-            close $irc;
+            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
+            print $w $msg;
+            close $w;
         }
     }
 }
@@ -228,14 +228,14 @@ sub getalias {
 }
 
 sub setalias {
-    my ($cfg,$phone,$nick) = @_;
+    my ($sig,$phone,$nick) = @_;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$sig->{db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
     $dbh->do("insert or replace into alias (phone,nick) values (?,?)", undef, $phone, $nick) or die $DBI::errstr;
     $dbh->disconnect();
 }
 
 sub nickhelp {
-    my ($cfg,$phone,$nick) = @_;
+    my ($sig,$phone,$nick) = @_;
     my $text = 'You do not have a nickname set. You are now known as '.$nick;
     $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
     my ($out, $err, $ret) = tee {
@@ -262,6 +262,8 @@ sub errorsend {
     } else {
         $msg = $err;
     }
+    return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 3600;
+    $sig->{errors}->{$msg} = time;
 
     qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
 }
