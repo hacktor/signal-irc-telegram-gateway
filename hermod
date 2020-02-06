@@ -223,7 +223,7 @@ sub relay2tel {
     my $telmsg;
     eval { $telmsg = uri_escape($text); };
     $telmsg = uri_escape_utf8($text) if $@;
-    qx( "$URL?chat_id=$chat_id&text=$telmsg" );
+    qx( curl "$URL?chat_id=$chat_id&text=$telmsg" );
 }
 
 sub relay {
