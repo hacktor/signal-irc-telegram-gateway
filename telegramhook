@@ -11,7 +11,6 @@
 
 use strict;
 use CGI::Fast qw/:standard/;
-use HTTP::Tiny;
 use JSON;
 use Text::Unidecode;
 use DBI;
@@ -71,9 +70,9 @@ while (my $cgi = CGI::Fast->new) {
         if (defined $doc->{file_id}) {
 
             # download the file
-            my $response = HTTP::Tiny->new->get( "https://api.telegram.org/bot$tel->{token}/getFile?file_id=$doc->{file_id}" );
-            if ($response->{success}) {
-                my $djfile = decode_json( $response->{content} );
+            my $response = qx( curl -s "https://api.telegram.org/bot$tel->{token}/getFile?file_id=$doc->{file_id}" );
+            eval {
+                my $djfile = decode_json( $response );
                 my $path = $djfile->{result}->{file_path};
                 (my $file = $path) =~ s#.*/##;
                 my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
