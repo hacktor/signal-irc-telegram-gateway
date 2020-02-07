@@ -141,7 +141,7 @@ for (;;) {
                     my $telmsg;
                     eval { $telmsg = uri_escape($text); };
                     $telmsg = uri_escape_utf8($text) if $@;
-                    qx( curl "$URL$telmsg" );
+                    qx( curl -s "$URL$telmsg" );
                 }
 
                 next;
@@ -167,7 +167,7 @@ for (;;) {
             my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
             eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
             $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
-            qx( curl "$URL$telmsg" );
+            qx( curl -s "$URL$telmsg" );
         }
 
         # relay to IRC
