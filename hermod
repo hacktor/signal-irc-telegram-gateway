@@ -7,7 +7,7 @@
 # 2019, Ruben de Groot
 
 use strict;
-use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::SSLify);
+use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::IRC::Plugin::BotAddressed Component::SSLify);
 use URI::Escape;
 use JSON qw( decode_json );
 use DBI;
@@ -34,7 +34,7 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_nick irc_tail_input irc_ctcp_action irc_353) ],
+        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_nick irc_tail_input irc_ctcp_action irc_353 irc_bot_addressed irc_bot_mentioned) ],
     ],
     heap => { irc => $irc },
 );
@@ -44,9 +44,13 @@ $poe_kernel->run();
 sub _start {
 
     # file to be read and send to the channel
-    $irc->plugin_add( 'FollowTail' => POE::Component::IRC::Plugin::FollowTail->new(
+    $irc->plugin_add( FollowTail => POE::Component::IRC::Plugin::FollowTail->new(
         filename => $cfg->{irc}->{infile},
     ));
+
+    # respond when we are mentioned or addressed
+    $irc->plugin_add( BotAddressed => POE::Component::IRC::Plugin::BotAddressed->new() );
+
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
     return;
@@ -193,6 +197,34 @@ sub irc_tail_input {
     } else {
         $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, $input );
     }
+}
+
+sub irc_bot_addressed {
+
+    # Reply when someone addresses me
+    my ($sender, $what) = @_[SENDER, ARG2];
+    my $nick = ( split /!/, $_[ARG0] )[0];
+ 
+    my $text = "Hi $nick, you addressed me, but I'm just a messenger bot, please don't shoot me. I relay messages between IRC, Telegram and Signal users. You can see the name of the person who spoke to you directly after the [Tg] or [Sg] tag.";
+    $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
+    $text = "[IRC] $cfg->{irc}->{nick}: $text\n";
+    relay2tel($tel->{chat_id},$text) if defined $tel;
+    relay($sig->{infile},$text) if defined $sig;
+    print "$nick addressed me with the message '$what'\n";
+    print $dbg "$nick addressed me with the message '$what'\n" if defined $dbg;
+}
+ 
+sub irc_bot_mentioned {
+    my ($sender, $what) = @_[SENDER, ARG2];
+    my ($nick) = ( split /!/, $_[ARG0] )[0];
+ 
+    my $text = "Hi $nick, you mentioned me. I'm a messenger bot, don't shoot me. I relay messages between IRC, Telegram and Signal users. You can see the name of the person who spoke to you directly after the [Tg] or [Sg] tag.";
+    $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
+    $text = "[IRC] $cfg->{irc}->{nick}: $text\n";
+    relay2tel($tel->{chat_id},$text) if defined $tel;
+    relay($sig->{infile},$text) if defined $sig;
+    print "$nick mentioned my name with the message '$what'\n";
+    print $dbg "$nick mentioned my name with the message '$what'\n" if defined $dbg;
 }
 
 sub _default {
