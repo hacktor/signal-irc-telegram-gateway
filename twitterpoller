@@ -154,7 +154,7 @@ sub relay {
         eval { $telmsg = uri_escape($url); };
         $telmsg = uri_escape_utf8($url) if $@;
 
-        HTTP::Tiny->new->get( "$URL?chat_id=$chat_id&text=$telmsg" );
+        qx( curl -s "$URL?chat_id=$chat_id&text=$telmsg" );
         print "To telegram: $url";
     }
 
