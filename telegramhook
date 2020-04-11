@@ -90,7 +90,8 @@ while (my $cgi = CGI::Fast->new) {
         # is the message a sticker?
         if (defined $dj->{message}->{sticker}) {
             my $sticknam = (defined $dj->{message}->{sticker}->{set_name}) ? $dj->{message}->{sticker}->{set_name} : '';
-            $text .= "\nsends a $sticknam sticker";
+            $text .= "\nsends a $sticknam sticker ";
+            $text .= $dj->{message}->{sticker}->{emoji} if defined $dj->{message}->{sticker}->{emoji};
         }
         
         # is the message a reply?
