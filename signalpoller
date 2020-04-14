@@ -160,7 +160,7 @@ for (;;) {
         next unless $group eq $sig->{gid};
         next unless $text or $attach;
 
-        if (defined $tel->{token} and defined $tel->{chat_id}) {
+        if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
 
             # relay to telegram
             my $telmsg;
