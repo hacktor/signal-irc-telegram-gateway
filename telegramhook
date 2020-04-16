@@ -46,23 +46,24 @@ while (my $cgi = CGI::Fast->new) {
     
     # check type of msg and chat_id
     if (defined $dj->{message}->{chat}->{id} and $dj->{message}->{chat}->{id} == $tel->{chat_id}) {
-    
-        my $user_id = (defined $dj->{message}->{from}->{id} and $dj->{message}->{from}->{id} =~ /^\d+$/) ?
+
+        my $msg = $dj->{message};
+        my $user_id = (defined $msg->{from}->{id} and $msg->{from}->{id} =~ /^\d+$/) ?
             $dj->{'message'}->{'from'}->{id} : 0;
-        my $text = (defined $dj->{message}->{text}) ? $dj->{message}->{text} : "";
-        my $first = (defined $dj->{message}->{from}->{first_name}) ? $dj->{message}->{from}->{first_name} : "";
-        my $last = (defined $dj->{message}->{from}->{last_name}) ? $dj->{message}->{from}->{last_name} : "";
-        my $caption = (defined $dj->{message}->{caption}) ? $dj->{message}->{caption} : "";
+        my $text = (defined $msg->{text}) ? $msg->{text} : "";
+        my $first = (defined $msg->{from}->{first_name}) ? $msg->{from}->{first_name} : "";
+        my $last = (defined $msg->{from}->{last_name}) ? $msg->{from}->{last_name} : "";
+        my $caption = (defined $msg->{caption}) ? $msg->{caption} : "";
         
         # look for photo's and documents
         my ($type,$doc);
-        if (defined $dj->{message}->{photo}) {
-            $doc = @{$dj->{message}->{photo}}[-1];
+        if (defined $msg->{photo}) {
+            $doc = @{$msg->{photo}}[-1];
             $type = 'photo';
         }
         foreach my $t ('voice', 'audio', 'document', 'video') { 
-            if (defined $dj->{message}->{$t}) {
-                $doc = $dj->{message}->{$t};
+            if (defined $msg->{$t}) {
+                $doc = $msg->{$t};
                 $type = $t;
             }
         }
@@ -88,34 +89,39 @@ while (my $cgi = CGI::Fast->new) {
         }
         
         # is the message a sticker?
-        if (defined $dj->{message}->{sticker}) {
-            my $sticknam = (defined $dj->{message}->{sticker}->{set_name}) ? $dj->{message}->{sticker}->{set_name} : '';
+        if (defined $msg->{sticker}) {
+            my $sticknam = (defined $msg->{sticker}->{set_name}) ? $msg->{sticker}->{set_name} : '';
             $text .= "\nsends a $sticknam sticker ";
-            $text .= $dj->{message}->{sticker}->{emoji} if defined $dj->{message}->{sticker}->{emoji};
+            $text .= $msg->{sticker}->{emoji} if defined $msg->{sticker}->{emoji};
         }
         
         # is the message a reply?
-        $text = "(reply to: $dj->{message}->{reply_to_message}->{text}) " . $text if defined $dj->{message}->{reply_to_message} and
-            $dj->{message}->{reply_to_message}->{text};
-        
-        # is the message forwarded from another channel?
-        if (defined $dj->{message}->{forward_from_chat} and defined $tel->{forward}) {
+        $text = "(reply to: $msg->{reply_to_message}->{text}) " . $text if defined $msg->{reply_to_message} and
+            $msg->{reply_to_message}->{text};
 
-            $text = "[$dj->{message}->{forward_from_chat}->{title}]: $dj->{message}->{text}\n";
+        # is the message a forward?
+        if (defined $msg->{forward_from_chat}->{id} or defined $msg->{forward_from}->{id}) {
+            my $forw_id = (defined $msg->{forward_from}->{id}) ? $msg->{forward_from}->{id} :
+                $msg->{forward_from_chat}->{id};
+
+            my $title = (defined $msg->{forward_from}->{title}) ? $msg->{forward_from}->{title} :
+                (defined $msg->{forward_from_chat}->{title}) ? $msg->{forward_from_chat}->{title} :
+                (defined $msg->{forward_from}->{first_name}) ? $msg->{forward_from}->{first_name} :
+                (defined $msg->{forward_from_chat}->{first_name}) ? $msg->{forward_from_chat}->{first_name} : "Forward";
+            $title = $msg->{forward_from_chat}->{first_name} unless $title;
+
+            $text = "[Fwd from $title]: $msg->{text}\n";
             print $irc $text;
             print $sig $text;
-            ok("forwarded msg: $dj->{message}->{text} from $dj->{message}->{forward_from_chat}->{title}\n");
-
-        } elsif (defined $dj->{message}->{forward_from_chat}) {
-
-            # don't forward; let twitterpoller handle this
-            ok("NOT forwarded msg: $dj->{message}->{text} from $dj->{message}->{forward_from_chat}->{title}\n");
+            ok("forwarded msg: $msg->{text} from $title\n");
         }
+
+        # is the message a channel post?
         
         # look for new chat members
-        if (defined $dj->{message}->{new_chat_members}) {
+        if (defined $msg->{new_chat_members}) {
             my $members = '';
-            foreach my $m (@{$dj->{message}->{new_chat_members}}) {
+            foreach my $m (@{$msg->{new_chat_members}}) {
                 $st_ins->execute($m->{id},$m->{first_name},$m->{last_name},$m->{username},$m->{is_bot}) if defined $st_ins;
                 $members .= ', ' if $members;
                 $members .= "$m->{first_name}";
@@ -128,12 +134,12 @@ while (my $cgi = CGI::Fast->new) {
         }
         
         # look for leaving chat members
-        if (defined $dj->{message}->{left_chat_member}->{id}) {
-            $st_del->execute($dj->{message}->{left_chat_member}->{id}) if defined $st_del;
-            $text = "[Tg] $dj->{message}->{left_chat_member}->{first_name} left the chat\n";
+        if (defined $msg->{left_chat_member}->{id}) {
+            $st_del->execute($msg->{left_chat_member}->{id}) if defined $st_del;
+            $text = "[Tg] $msg->{left_chat_member}->{first_name} left the chat\n";
             print $irc $text;
             print $sig $text;
-            ok("Leaving member: $dj->{message}->{left_chat_member}->{first_name}\n");
+            ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
 
         # look for commands
