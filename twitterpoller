@@ -20,6 +20,7 @@ close $fh;
 my $twit = $cfg->{twitter} if defined $cfg->{twitter};
 my $tele = $cfg->{telegram} if defined $cfg->{telegram};
 my $URL = "https://api.telegram.org/bot$tele->{token}/sendMessage";
+my $doomsday = time + 86400; # hack for restarting because unknown bug
 
 die "Missing consumer key" unless defined $twit->{consumer_key};
 die "Missing consumer secret" unless defined $twit->{consumer_secret};
@@ -41,6 +42,7 @@ while (1) {
     namepoll($twit->{screen_names}) if defined $twit->{screen_names} and @{$twit->{screen_names}};
     tagpoll($twit->{tags}) if defined $twit->{tags} and @{$twit->{tags}};
     my $tick = (defined $twit->{tick}) ? $twit->{tick} : 300;
+    last if time > $doomsday; # hack for restarting because unknown bug
     sleep $tick;
 }
 
