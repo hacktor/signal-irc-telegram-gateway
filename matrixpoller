@@ -1,0 +1,187 @@
+#!/usr/bin/perl -w
+#
+# Matrix Poller for Hermod Gateway Bot.
+#
+# Keeping a tail on the tosignal file for messages to send to signal.
+# Polling the signal group for new messages. These are send to telegram 
+# and irc
+#
+# 2020, Ruben de Groot
+
+use strict;
+use JSON;
+use WWW::Curl::Easy;
+use WWW::Curl::Form;
+use URI::Escape;
+use DBI;
+use Capture::Tiny 'tee';
+
+open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
+my $cfg = decode_json do { local $/; <$fh> };
+
+unless (defined $cfg->{matrix}->{token} and defined $cfg->{matrix}->{room}) {
+    print "Please define matrix->token and matrix->room\n";
+    print "Press <Ctrl>-C to continue\n";
+    sleep; exit;
+}
+my $mat = $cfg->{matrix};
+open my $dbg, ">>", $mat->{debug} if defined $mat->{debug};
+my $sig = $cfg->{signal} if defined $cfg->{signal};
+my $tel = $cfg->{telegram} if defined $cfg->{telegram};
+my $irc = $cfg->{irc} if defined $cfg->{irc};
+
+# query first for next_batch
+my $json = JSON->new->allow_nonref;
+(my $URL = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
+$URL =~ s/__TOKEN__/$mat->{token}/;
+
+my ($out, $err, $ret) = tee {
+    system("curl", "-XGET", "$URL")
+};
+print $dbg $out, $err if defined $dbg;
+my $msg;
+eval {
+    $msg = $json->decode($out);
+    $mat->{since} = $msg->{next_batch} if defined $msg->{next_batch};
+};
+if ($@) {
+    print "Error in json decode $@\n";
+    exit 1;
+}
+
+# tailing matrix infile for stuff to send
+open my $tail, "<", $mat->{infile} or die @_;
+my $inode = (stat($mat->{infile}))[1];
+# SEEK_END
+seek($tail, 0, 2) or die @_;
+for (;;) {
+    sleep 1; # not to get too tight loop
+
+    # check if logfiles haven't turned over below our feet
+    if ($inode != (stat($mat->{infile}))[1]) {
+        close $tail;
+        $inode = (stat($mat->{infile}))[1];
+        open($tail,$mat->{infile}) or next;
+    } else {
+        # SEEK_CUR
+        seek($tail, 0, 1);
+    }
+
+    # send new messages to matrix group
+    my $msg ='';
+    while (my $line = <$tail>) {
+
+        $msg .= $line;
+    }
+    if ($msg) {
+
+        my ($out, $err, $ret) = tee {
+            system("curl", "-XPOST", "-d", "$body", "$posturl")
+        };
+        print $dbg $out, $err if defined $dbg;
+        errorsend($err) if $err;
+    }
+
+    # now poll the signal group for new messages
+    ($URL = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
+    $URL =~ s/__TOKEN__/$mat->{token}/;
+    my ($out, $err, $ret) = tee {
+        system("curl", "-XGET", "$URL")
+    };
+    print $dbg $out, $err if defined $dbg;
+
+    eval {
+        my $msg = $json->decode($out);
+        $mat->{since} = $msg->{next_batch} if defined $msg->{next_batch};
+        errorsend($err) if $err;
+    
+        $msg = $json->decode($out);
+        my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
+        my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
+        my $text = (defined $datamsg->{message}) ? $datamsg->{message} : "";
+        my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
+    
+    
+    
+        if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
+    
+            # relay to telegram
+            my $telmsg;
+            my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
+            eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
+            $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
+            qx( curl -s "$URL$telmsg" );
+        }
+    
+        # relay to IRC
+        my @lines = split /\n/, $text;
+        open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
+        for my $msg (@lines) {
+            next unless $msg;
+    
+            # send to IRC, split lines in chunks of ~maxmsg size if necessary
+            if (length $msg > $irc->{maxmsg}) {
+                $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                print $w "[Sg] $anonsender: $_\n" for split /\n/, $msg;
+            } else {
+                print $w "[Sg] $anonsender: $msg\n";
+            }
+        }
+        close $w;
+    };
+
+}
+
+sub getalias {
+    my $sig = shift;
+    my $alias;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$sig->{db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
+    my $obj = $dbh->prepare("select * from alias");
+    $obj->execute() or die $DBI::errstr;
+
+    while (my $row = $obj->fetchrow_hashref()) {
+        $alias->{$row->{phone}} = $row->{nick};
+    }
+    return $alias;
+}
+
+sub setalias {
+    my ($sig,$phone,$nick) = @_;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$sig->{db}", "", "", { RaiseError => 1 }, ) or die $DBI::errstr;
+    $dbh->do("insert or replace into alias (phone,nick) values (?,?)", undef, $phone, $nick) or die $DBI::errstr;
+    $dbh->disconnect();
+}
+
+sub nickhelp {
+    my ($sig,$phone,$nick) = @_;
+    my $text = 'You do not have a nickname set. You are now known as '.$nick;
+    $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
+    my ($out, $err, $ret) = tee {
+        system($sig->{cli},"-u",$sig->{phone},"send","-m","$text",$phone);
+    };
+    print $dbg $out, $err if defined $dbg;
+    errorsend($err) if $err;
+}
+
+sub errorsend {
+    my $err = shift;
+    my $msg = '';
+    my $hostname = qx( hostname ); chomp $hostname;
+
+    # filters here
+    if ($err =~ /Failed to send \(some\) messages:/) {
+        while ($err =~ /Unregistered user (\+[\d]+): null/g) {
+            unless (defined $sig->{unreg}->{$1}) {
+                $sig->{unreg}->{$1} = 1;
+                $msg .= " $1";
+            }
+        }
+        $msg = "Unregistered users: $msg\n" if $msg;
+    } else {
+        $msg = $err;
+    }
+    return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 3600;
+    $sig->{errors}->{$msg} = time;
+
+    qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
+}
