@@ -99,7 +99,7 @@ for (;;) {
 
                 my $sender = (defined $ev->{sender}) ? $ev->{sender} : "";
                 my $text = (defined $ev->{content}->{body}) ? $ev->{content}->{body} : "";
-                next if $mat->{bot} eq $sender;
+                next if $mat->{bot} eq $sender or not $text;
 
                 if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
 
@@ -112,20 +112,29 @@ for (;;) {
                 }
 
                 # relay to IRC
-                my @lines = split /\n/, $text;
-                open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-                for my $msg (@lines) {
-                    next unless $msg;
+                if (defined $irc->{infile}) {
+                    my @lines = split /\n/, $text;
+                    open my $w, ">>", $irc->{infile};
+                    for my $msg (@lines) {
+                        next unless $msg and defined $w;
 
-                    # send to IRC, split lines in chunks of ~maxmsg size if necessary
-                    if (length $msg > $irc->{maxmsg}) {
-                        $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                        print $w "[MTX] $sender: $_\n" for split /\n/, $msg;
-                    } else {
-                        print $w "[MTX] $sender: $msg\n";
+                        # send to IRC, split lines in chunks of ~maxmsg size if necessary
+                        if (length $msg > $irc->{maxmsg}) {
+                            $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                            print $w "[MTX] $sender: $_\n" for split /\n/, $msg;
+                        } else {
+                            print $w "[MTX] $sender: $msg\n";
+                        }
                     }
+                    close $w if defined $w;
                 }
-                close $w;
+
+                # relay ro signal
+                if (defined $sig->{infile}) {
+                    open my $w, ">>", $sig->{infile} or die "Died opening signal infile $sig->{infile}";
+                    print $w "[MTX] $sender: $text\n" if defined $w;
+                    close $w if defined $w;
+                }
             }
         }
     };
