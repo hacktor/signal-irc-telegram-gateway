@@ -125,7 +125,7 @@ for (;;) {
                 print $w "$text";
                 close $w;
 
-                $text = "[SIG] $text";
+                $text = "[sig] $text";
 
                 if (defined $irc->{infile}) {
 
@@ -166,8 +166,8 @@ for (;;) {
             # relay to telegram
             my $telmsg;
             my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-            eval { $telmsg = uri_escape("[SIG] $anonsender: $text"); };
-            $telmsg = uri_escape_utf8("[SIG] $anonsender: $text") if $@;
+            eval { $telmsg = uri_escape("[sig] $anonsender: $text"); };
+            $telmsg = uri_escape_utf8("[sig] $anonsender: $text") if $@;
             qx( curl -s "$URL$telmsg" );
         }
 
@@ -181,9 +181,9 @@ for (;;) {
                 # send to IRC, split lines in chunks of ~maxmsg size if necessary
                 if (length $msg > $irc->{maxmsg}) {
                     $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                    print $w "[SIG] $anonsender: $_\n" for split /\n/, $msg;
+                    print $w "[sig] $anonsender: $_\n" for split /\n/, $msg;
                 } else {
-                    print $w "[SIG] $anonsender: $msg\n";
+                    print $w "[sig] $anonsender: $msg\n";
                 }
             }
             close $w;
@@ -193,7 +193,7 @@ for (;;) {
         if (defined $mat->{infile} and $text =~ /\w/) {
 
             open my $w, ">>", $mat->{infile};
-            print $w "[SIG] $anonsender: $text\n" if defined $w;
+            print $w "[sig] $anonsender: $text\n" if defined $w;
             close $w;
         }
 
@@ -205,11 +205,11 @@ for (;;) {
             if ($att->{contentType} =~ /image/) {
                 $URL = "https://api.telegram.org/bot$tel->{token}/sendPhoto";
                 $type = 'photo';
-                $msg = "[SIG] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
+                $msg = "[sig] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
             } else {
                 $URL = "https://api.telegram.org/bot$tel->{token}/sendDocument";
                 $type = 'document';
-                $msg = "[SIG] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
+                $msg = "[sig] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
             }
 
             # relay to telegram
@@ -220,7 +220,7 @@ for (;;) {
                 my $curlf = WWW::Curl::Form->new;
                 $curlf->formaddfile("$sig->{attachments}/$att->{id}.$ext", $type, "multipart/form-data");
                 $curlf->formadd("chat_id", "$tel->{chat_id}");
-                $curlf->formadd("caption", "[SIG $ext $type sent by $anonsender]");
+                $curlf->formadd("caption", "[sig $ext $type sent by $anonsender]");
                 $curl->setopt(CURLOPT_HTTPPOST, $curlf);
                 my $retcode = $curl->perform;
                 if ($retcode != 0) {
