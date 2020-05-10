@@ -168,9 +168,10 @@ while (my $cgi = CGI::Fast->new) {
                 print $irc "[TEL] $first $last: $msg\n";
             }
 
-            # send to matrix
-            print $mat "[TEL] $first $last: $msg\n" if defined $mat;
         }
+
+        # send to matrix
+        print $mat "[TEL] $first $last: $text\n" if defined $mat;
 
         # for signal, skip documents, photo's. they've been sent already.
         print $sig "[TEL] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
