@@ -167,6 +167,8 @@ while (my $cgi = CGI::Fast->new) {
             } elsif (defined $irc) {
                 print $irc "[TEL] $first $last: $msg\n";
             }
+
+            # send to matrix
             print $mat "[TEL] $first $last: $msg\n" if defined $mat;
         }
 
