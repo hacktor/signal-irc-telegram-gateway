@@ -89,7 +89,7 @@ sub irc_public {
         return;
     }
 
-    my $text = "[IRC] $nick: $what\n";
+    my $text = "[irc] $nick: $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
     relay($sig->{infile},$text) if defined $sig;
     relay($mat->{infile},$text) if defined $mat;
@@ -124,7 +124,7 @@ sub irc_ctcp_action {
     # handle /me events
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
-    my $text = "[IRC] ***$nick $what\n";
+    my $text = "[irc] ***$nick $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
     relay($sig->{infile},$text) if defined $sig;
     relay($mat->{infile},$text) if defined $mat;
@@ -135,7 +135,7 @@ sub irc_nick {
     # handle /nick events
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
-    my $text = "[IRC] $nick is now known as $who\n";
+    my $text = "[irc] $nick is now known as $who\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
     relay($sig->{infile},$text) if defined $sig;
     relay($mat->{infile},$text) if defined $mat;
@@ -147,7 +147,7 @@ sub irc_join {
     my ($who,$channel) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
     return if $nick eq $cfg->{irc}->{nick};
-    my $text = "[IRC] $nick joined the chat\n";
+    my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
         relay($sig->{infile},$text) if defined $sig;
@@ -160,7 +160,7 @@ sub irc_quit {
     # someone leaves the channel
     my ($who,$msg) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
-    my $text = "[IRC] $nick quit the chat ($msg)\n";
+    my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
         relay($sig->{infile},$text)if defined $sig;
@@ -211,7 +211,7 @@ sub irc_bot_addressed {
     my ($sender, $what) = @_[SENDER, ARG2];
     my $nick = ( split /!/, $_[ARG0] )[0];
  
-    my $text = "Hi $nick, you addressed me, but I'm just a messenger bot, please don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [TEL], [SIG] or [MTX] tag.";
+    my $text = "Hi $nick, you addressed me, but I'm just a messenger bot, please don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig] or [mtx] tag.";
     $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
     print $dbg "$nick addressed me with the message '$what'\n" if defined $dbg;
 }
@@ -220,7 +220,7 @@ sub irc_bot_mentioned {
     my ($sender, $what) = @_[SENDER, ARG2];
     my ($nick) = ( split /!/, $_[ARG0] )[0];
  
-    my $text = "Hi $nick, you mentioned me. I'm a messenger bot, don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [TEL], [SIG] or [MTX] tag.";
+    my $text = "Hi $nick, you mentioned me. I'm a messenger bot, don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig] or [mtx] tag.";
     $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
     print $dbg "$nick mentioned my name with the message '$what'\n" if defined $dbg;
 }
