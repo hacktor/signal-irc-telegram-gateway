@@ -124,7 +124,7 @@ for (;;) {
                 print $w "$text";
                 close $w;
 
-                $text = "[Sg] $text";
+                $text = "[SIG] $text";
 
                 if (defined $irc->{infile}) {
 
@@ -165,26 +165,36 @@ for (;;) {
             # relay to telegram
             my $telmsg;
             my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-            eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
-            $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
+            eval { $telmsg = uri_escape("[SIG] $anonsender: $text"); };
+            $telmsg = uri_escape_utf8("[SIG] $anonsender: $text") if $@;
             qx( curl -s "$URL$telmsg" );
         }
 
         # relay to IRC
-        my @lines = split /\n/, $text;
-        open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-        for my $msg (@lines) {
-            next unless $msg;
-
-            # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            if (length $msg > $irc->{maxmsg}) {
-                $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $w "[Sg] $anonsender: $_\n" for split /\n/, $msg;
-            } else {
-                print $w "[Sg] $anonsender: $msg\n";
+        if (defined $irc->{infile}) {
+            my @lines = split /\n/, $text;
+            open my $w, ">>", $irc->{infile};
+            for my $msg (@lines) {
+                next unless $msg and defined $w;
+    
+                # send to IRC, split lines in chunks of ~maxmsg size if necessary
+                if (length $msg > $irc->{maxmsg}) {
+                    $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                    print $w "[SIG] $anonsender: $_\n" for split /\n/, $msg;
+                } else {
+                    print $w "[SIG] $anonsender: $msg\n";
+                }
             }
+            close $w;
         }
-        close $w;
+
+        # relay to Matrix
+        if (defined $mat->{infile}) {
+
+            open my $w, ">>", $mat->{infile};
+            print $w "[SIG] $anonsender: $text\n" if defined $w;
+            close $w;
+        }
 
         # relay optional attachments
         foreach my $att (@$attach) {
@@ -194,29 +204,45 @@ for (;;) {
             if ($att->{contentType} =~ /image/) {
                 $URL = "https://api.telegram.org/bot$tel->{token}/sendPhoto";
                 $type = 'photo';
-                $msg = "[Sg] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
+                $msg = "[SIG] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
             } else {
                 $URL = "https://api.telegram.org/bot$tel->{token}/sendDocument";
                 $type = 'document';
-                $msg = "[Sg] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
+                $msg = "[SIG] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
             }
 
-            my $curl = WWW::Curl::Easy->new;
-            $curl->setopt(CURLOPT_URL, $URL);
-            my $curlf = WWW::Curl::Form->new;
-            $curlf->formaddfile("$sig->{attachments}/$att->{id}.$ext", $type, "multipart/form-data");
-            $curlf->formadd("chat_id", "$tel->{chat_id}");
-            $curlf->formadd("caption", "[Sg $ext $type sent by $anonsender]");
-            $curl->setopt(CURLOPT_HTTPPOST, $curlf);
-            my $retcode = $curl->perform;
-            if ($retcode != 0) {
-                print "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
-                print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if defined $dbg;
+            # relay to telegram
+            if (defined $tel->{chat_id}) {
+
+                my $curl = WWW::Curl::Easy->new;
+                $curl->setopt(CURLOPT_URL, $URL);
+                my $curlf = WWW::Curl::Form->new;
+                $curlf->formaddfile("$sig->{attachments}/$att->{id}.$ext", $type, "multipart/form-data");
+                $curlf->formadd("chat_id", "$tel->{chat_id}");
+                $curlf->formadd("caption", "[SIG $ext $type sent by $anonsender]");
+                $curl->setopt(CURLOPT_HTTPPOST, $curlf);
+                my $retcode = $curl->perform;
+                if ($retcode != 0) {
+                    print "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
+                    print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if defined $dbg;
+                }
             }
 
-            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-            print $w $msg;
-            close $w;
+            # relay to irc
+            if (defined $irc->{infile}) {
+
+                open my $w, ">>", $irc->{infile};
+                print $w $msg if defined $w;
+                close $w;
+            }
+
+            # relay to matrix
+            if (defined $mat->{infile}) {
+
+                open my $w, ">>", $mat->{infile};
+                print $w $msg if defined $w;
+                close $w;
+            }
         }
     }
 }
