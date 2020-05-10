@@ -60,6 +60,16 @@ appropriately
         "tags": [],
         "tick": 300
     }
+    "matrix": {
+        "token": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "room": "!xxxxxxxxxxxxxxxxxx:matrix.org",
+        "bot": "@gateway:matrix.org",
+        "debug": "/var/www/log/matrix.debug",
+        "infile": "/var/www/log/tomatrix.log",
+        "syncurl": "https://matrix.org/_matrix/client/r0/sync?since=__SINCE__&access_token=__TOKEN__",
+        "posturl": "https://matrix.org/_matrix/client/r0/rooms/__ROOM__/send/m.room.message?access_token=__TOKEN__",
+        "since": "s1371516656_757269739_2333033_498970033_329640559_1201381_52875555_50274419_99428"
+    }
 }
 ```
 For more detailed information on the various configuration options, consult the [Wiki](./wiki)
@@ -159,8 +169,14 @@ Establishing connection to [irc.freenode.net]
 ...
 
 ```
-that's all. You will see messages scrolling showing the login proces on IRC. You probably want to run these in screen(1) from cron
+that's all. You will see messages scrolling showing the login proces on IRC.
+
+## Start the matrixpoller (optional)
+
+You probably want to run these in screen(1) from cron
 ```bash
 @reboot screen -S hermod -d -m while true; do /home/hermod/bin/hermod; done
-@reboot screen -S poller -d -m while true; do /home/hermod/bin/signalpoller; done
+@reboot screen -S signal -d -m while true; do /home/hermod/bin/signalpoller; done
+@reboot screen -S twitter -d -m while true; do /home/hermod/bin/twitterpoller; done
+@reboot screen -S matrix -d -m while true; do /home/hermod/bin/matrixpoller; done
 ```
