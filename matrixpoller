@@ -106,8 +106,8 @@ for (;;) {
                     # relay to telegram
                     my $telmsg;
                     my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-                    eval { $telmsg = uri_escape("[MTX] $sender: $text"); };
-                    $telmsg = uri_escape_utf8("[MTX] $sender: $text") if $@;
+                    eval { $telmsg = uri_escape("[mtx] $sender: $text"); };
+                    $telmsg = uri_escape_utf8("[mtx] $sender: $text") if $@;
                     qx( curl -s "$URL$telmsg" );
                 }
 
@@ -121,9 +121,9 @@ for (;;) {
                         # send to IRC, split lines in chunks of ~maxmsg size if necessary
                         if (length $msg > $irc->{maxmsg}) {
                             $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                            print $w "[MTX] $sender: $_\n" for split /\n/, $msg;
+                            print $w "[mtx] $sender: $_\n" for split /\n/, $msg;
                         } else {
-                            print $w "[MTX] $sender: $msg\n";
+                            print $w "[mtx] $sender: $msg\n";
                         }
                     }
                     close $w if defined $w;
@@ -132,7 +132,7 @@ for (;;) {
                 # relay ro signal
                 if (defined $sig->{infile}) {
                     open my $w, ">>", $sig->{infile} or die "Died opening signal infile $sig->{infile}";
-                    print $w "[MTX] $sender: $text\n" if defined $w;
+                    print $w "[mtx] $sender: $text\n" if defined $w;
                     close $w if defined $w;
                 }
             }
