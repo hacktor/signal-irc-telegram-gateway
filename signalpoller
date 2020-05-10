@@ -172,7 +172,7 @@ for (;;) {
         }
 
         # relay to IRC
-        if (defined $irc->{infile}) {
+        if (defined $irc->{infile} and $text =~ /\w/) {
             my @lines = split /\n/, $text;
             open my $w, ">>", $irc->{infile};
             for my $msg (@lines) {
@@ -190,7 +190,7 @@ for (;;) {
         }
 
         # relay to Matrix
-        if (defined $mat->{infile}) {
+        if (defined $mat->{infile} and $text =~ /\w/) {
 
             open my $w, ">>", $mat->{infile};
             print $w "[SIG] $anonsender: $text\n" if defined $w;
