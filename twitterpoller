@@ -166,8 +166,10 @@ sub relay {
         my @infiles;
         push @infiles, $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
         push @infiles, $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
+        push @infiles, $cfg->{matrix}->{infile} if defined $cfg->{matrix}->{infile};
         for my $file (@infiles) {
             open my $w, ">>:utf8", $file;
+            next unless defined $w;
             print $w "[$name] $url";
             for my $line (split /\n/, $text) {
 
