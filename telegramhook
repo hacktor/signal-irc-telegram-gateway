@@ -129,7 +129,7 @@ while (my $cgi = CGI::Fast->new) {
                 $members .= "$m->{first_name}";
                 $members .= " $m->{last_name}" if $m->{last_name};
             }
-            $text = "[TEL] $members joined the chat\n";
+            $text = "[tel] $members joined the chat\n";
             print $irc $text if defined $irc;
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
@@ -139,7 +139,7 @@ while (my $cgi = CGI::Fast->new) {
         # look for leaving chat members
         if (defined $msg->{left_chat_member}->{id}) {
             $st_del->execute($msg->{left_chat_member}->{id}) if defined $st_del;
-            $text = "[TEL] $msg->{left_chat_member}->{first_name} left the chat\n";
+            $text = "[tel] $msg->{left_chat_member}->{first_name} left the chat\n";
             print $irc $text if defined $irc;
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
@@ -163,18 +163,18 @@ while (my $cgi = CGI::Fast->new) {
             # send to IRC, split lines in chunks of ~maxmsg size if necessary
             if (defined $irc and length $msg > $cfg->{irc}->{maxmsg}) {
                 $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $irc "[TEL] $first $last: $_\n" for split /\n/, $msg;
+                print $irc "[tel] $first $last: $_\n" for split /\n/, $msg;
             } elsif (defined $irc) {
-                print $irc "[TEL] $first $last: $msg\n";
+                print $irc "[tel] $first $last: $msg\n";
             }
 
         }
 
         # send to matrix
-        print $mat "[TEL] $first $last: $text\n" if defined $mat;
+        print $mat "[tel] $first $last: $text\n" if defined $mat;
 
         # for signal, skip documents, photo's. they've been sent already.
-        print $sig "[TEL] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
+        print $sig "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
     }
     ok();
 }
