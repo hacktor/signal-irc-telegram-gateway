@@ -39,7 +39,6 @@ my $json = JSON->new->allow_nonref;
 my ($out, $err, $ret) = tee {
     system("curl", "-XGET", "-s", "$syncurl")
 };
-print $dbg $out, $err if defined $dbg;
 my $msg;
 eval {
     $msg = $json->decode($out);
@@ -47,6 +46,7 @@ eval {
 };
 if ($@) {
     print "Error in json decode $@\n";
+    print $dbg $out, $err if defined $dbg;
     exit 1;
 }
 
@@ -69,10 +69,10 @@ for (;;) {
     }
 
     # send new messages to matrix group
-    my $msg ='';
     while (my $line = <$tail>) {
 
         chomp $line;
+        $line =~ s/"/\\"/g;
         my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
         my ($out, $err, $ret) = tee {
             system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
