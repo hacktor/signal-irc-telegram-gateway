@@ -18,9 +18,10 @@ use DBI;
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
 
-# communicate with bot through a logfile
-open my $irc, '>>:utf8', $cfg->{irc}->{infile} or die "error opening $cfg->{irc}->{infile}\n";
-open my $sig, '>>:utf8', $cfg->{signal}->{infile} or die "error opening $cfg->{signal}->{infile}\n";
+# communicate with bot through logfiles
+open my $irc, '>>:utf8', $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
+open my $sig, '>>:utf8', $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
+open my $mat, '>>:utf8', $cfg->{matrix}->{infile} if defined $cfg->{matrix}->{infile};
 open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
 unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
@@ -79,11 +80,11 @@ while (my $cgi = CGI::Fast->new) {
                 my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
                 qx( wget -O $tel->{attachments}/$file https://api.telegram.org/file/bot$tel->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
-                    print $sig "FILE:$file [sent by $first $last on telegram] $caption\n";
+                    print $sig "FILE:$file [sent by $first $last on telegram] $caption\n" if defined $sig;
                     $text = "** sends $type: $tel->{url}/$file";
                     $text .= " with caption: $caption" if $caption;
                 } else {
-                    print $dbg "Error getting $type $name $file\n";
+                    print $dbg "Error getting $type $name $file\n" if defined $dbg;
                 }
             }
         }
@@ -111,8 +112,9 @@ while (my $cgi = CGI::Fast->new) {
             $title = $msg->{forward_from_chat}->{first_name} unless $title;
 
             $text = "[Fwd from $title]: $msg->{text}\n";
-            print $irc $text;
-            print $sig $text;
+            print $irc $text if defined $irc;
+            print $sig $text if defined $sig;
+            print $mat $text if defined $mat;
             ok("forwarded msg: $msg->{text} from $title\n");
         }
 
@@ -127,18 +129,20 @@ while (my $cgi = CGI::Fast->new) {
                 $members .= "$m->{first_name}";
                 $members .= " $m->{last_name}" if $m->{last_name};
             }
-            $text = "[Tg] $members joined the chat\n";
-            print $irc $text;
-            print $sig $text;
+            $text = "[TEL] $members joined the chat\n";
+            print $irc $text if defined $irc;
+            print $sig $text if defined $sig;
+            print $mat $text if defined $mat;
             ok("New member(s): $members\n");
         }
         
         # look for leaving chat members
         if (defined $msg->{left_chat_member}->{id}) {
             $st_del->execute($msg->{left_chat_member}->{id}) if defined $st_del;
-            $text = "[Tg] $msg->{left_chat_member}->{first_name} left the chat\n";
-            print $irc $text;
-            print $sig $text;
+            $text = "[TEL] $msg->{left_chat_member}->{first_name} left the chat\n";
+            print $irc $text if defined $irc;
+            print $sig $text if defined $sig;
+            print $mat $text if defined $mat;
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
 
@@ -146,27 +150,28 @@ while (my $cgi = CGI::Fast->new) {
         if ($text =~ /!users/) {
 
             # user list asked; relay command to hermod
-            print $irc "CMD!TEL!users\n";
+            print $irc "CMD!TEL!users\n" if defined $irc;
 
             ok("!users command relayed for $first $last\n");
         }
 
-        # split lines and write to log for irc
+        # split lines and write to log for irc, matrix
         my @lines = split /\n/, $text;
         for my $msg (@lines) {
             next unless $msg;
 
             # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            if (length $msg > $cfg->{irc}->{maxmsg}) {
+            if (defined $irc and length $msg > $cfg->{irc}->{maxmsg}) {
                 $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $irc "[Tg] $first $last: $_\n" for split /\n/, $msg;
-            } else {
-                print $irc "[Tg] $first $last: $msg\n";
+                print $irc "[TEL] $first $last: $_\n" for split /\n/, $msg;
+            } elsif (defined $irc) {
+                print $irc "[TEL] $first $last: $msg\n";
             }
+            print $mat "[TEL] $first $last: $msg\n" if defined $mat;
         }
 
         # for signal, skip documents, photo's. they've been sent already.
-        print $sig "[Tg] $first $last: $text\n" unless $text =~ /\*\* sends /;
+        print $sig "[TEL] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
     }
     ok();
 }
