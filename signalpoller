@@ -30,6 +30,7 @@ $sig->{nicks} = getalias($sig);
 open my $dbg, ">>", $sig->{debug} if defined $sig->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
+my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 
 # tailing signal infile and telegram downloads for stuff to send
 open my $tail, "<", $sig->{infile} or die @_;
