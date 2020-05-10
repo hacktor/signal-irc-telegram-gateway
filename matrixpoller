@@ -29,13 +29,15 @@ my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 
+(my $syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
+$syncurl =~ s/__TOKEN__/$mat->{token}/;
+(my $posturl = $mat->{posturl}) =~ s/__ROOM__/$mat->{room}/;
+$posturl =~ s/__TOKEN__/$mat->{token}/;
+
 # query first for next_batch
 my $json = JSON->new->allow_nonref;
-(my $URL = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
-$URL =~ s/__TOKEN__/$mat->{token}/;
-
 my ($out, $err, $ret) = tee {
-    system("curl", "-XGET", "$URL")
+    system("curl", "-XGET", "-s", "$syncurl")
 };
 print $dbg $out, $err if defined $dbg;
 my $msg;
@@ -54,7 +56,7 @@ my $inode = (stat($mat->{infile}))[1];
 # SEEK_END
 seek($tail, 0, 2) or die @_;
 for (;;) {
-    sleep 1; # not to get too tight loop
+    sleep 10; # not to get too tight loop
 
     # check if logfiles haven't turned over below our feet
     if ($inode != (stat($mat->{infile}))[1]) {
@@ -70,63 +72,62 @@ for (;;) {
     my $msg ='';
     while (my $line = <$tail>) {
 
-        $msg .= $line;
-    }
-    if ($msg) {
-
-        my $body = '{"msgtype":"m.text", "body":"'.$msg.'"}';
+        chomp $line;
+        my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
         my ($out, $err, $ret) = tee {
-            system("curl", "-XPOST", "-d", "$body", "$posturl")
+            system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
         };
         print $dbg $out, $err if defined $dbg;
     }
 
     # now poll the matrix group for new messages
-    ($URL = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
-    $URL =~ s/__TOKEN__/$mat->{token}/;
+    ($syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
+    $syncurl =~ s/__TOKEN__/$mat->{token}/;
     my ($out, $err, $ret) = tee {
-        system("curl", "-XGET", "$URL")
+        system("curl", "-s", "-XGET", "$syncurl")
     };
     print $dbg $out, $err if defined $dbg;
 
     eval {
-        my $msg = $json->decode($out);
-        $mat->{since} = $msg->{next_batch} if defined $msg->{next_batch};
-    
         $msg = $json->decode($out);
-        my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
-        my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
-        my $text = (defined $datamsg->{message}) ? $datamsg->{message} : "";
-        my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
-    
-    
-    
-        if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
-    
-            # relay to telegram
-            my $telmsg;
-            my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-            eval { $telmsg = uri_escape("[Sg] $anonsender: $text"); };
-            $telmsg = uri_escape_utf8("[Sg] $anonsender: $text") if $@;
-            qx( curl -s "$URL$telmsg" );
-        }
-    
-        # relay to IRC
-        my @lines = split /\n/, $text;
-        open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-        for my $msg (@lines) {
-            next unless $msg;
-    
-            # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            if (length $msg > $irc->{maxmsg}) {
-                $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $w "[Sg] $anonsender: $_\n" for split /\n/, $msg;
-            } else {
-                print $w "[Sg] $anonsender: $msg\n";
+        next unless defined $msg->{next_batch};
+        $mat->{since} = $msg->{next_batch};
+
+        if (defined $msg->{rooms}->{join}->{$mat->{room}}->{timeline}->{events}) {
+
+            for my $ev (@{$msg->{rooms}->{join}->{$mat->{room}}->{timeline}->{events}}) {
+
+                my $sender = (defined $ev->{sender}) ? $ev->{sender} : "";
+                my $text = (defined $ev->{content}->{body}) ? $ev->{content}->{body} : "";
+                next if $mat->{bot} eq $sender;
+
+                if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
+
+                    # relay to telegram
+                    my $telmsg;
+                    my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
+                    eval { $telmsg = uri_escape("[MTX] $sender: $text"); };
+                    $telmsg = uri_escape_utf8("[MTX] $sender: $text") if $@;
+                    qx( curl -s "$URL$telmsg" );
+                }
+
+                # relay to IRC
+                my @lines = split /\n/, $text;
+                open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
+                for my $msg (@lines) {
+                    next unless $msg;
+
+                    # send to IRC, split lines in chunks of ~maxmsg size if necessary
+                    if (length $msg > $irc->{maxmsg}) {
+                        $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                        print $w "[MTX] $sender: $_\n" for split /\n/, $msg;
+                    } else {
+                        print $w "[MTX] $sender: $msg\n";
+                    }
+                }
+                close $w;
             }
         }
-        close $w;
     };
-
 }
 
