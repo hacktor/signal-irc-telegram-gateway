@@ -11,8 +11,8 @@
 use strict;
 use JSON;
 use URI::Escape;
-use DBI;
-use Capture::Tiny 'tee';
+use Capture::Tiny 'capture';
+my $msg;
 
 open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
 my $cfg = decode_json do { local $/; <$fh> };
@@ -36,10 +36,9 @@ $posturl =~ s/__TOKEN__/$mat->{token}/;
 
 # query first for next_batch
 my $json = JSON->new->allow_nonref;
-my ($out, $err, $ret) = tee {
+my ($out, $err, $ret) = capture {
     system("curl", "-XGET", "-s", "$syncurl")
 };
-my $msg;
 eval {
     $msg = $json->decode($out);
     $mat->{since} = $msg->{next_batch} if defined $msg->{next_batch};
@@ -74,7 +73,7 @@ for (;;) {
         chomp $line;
         $line =~ s/"/\\"/g;
         my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
-        my ($out, $err, $ret) = tee {
+        my ($out, $err, $ret) = capture {
             system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
         };
         print $dbg $out, $err if defined $dbg;
@@ -83,7 +82,7 @@ for (;;) {
     # now poll the matrix group for new messages
     ($syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
     $syncurl =~ s/__TOKEN__/$mat->{token}/;
-    my ($out, $err, $ret) = tee {
+    my ($out, $err, $ret) = capture {
         system("curl", "-s", "-XGET", "$syncurl")
     };
     print $dbg $out, $err if defined $dbg;
@@ -125,7 +124,9 @@ for (;;) {
                     my @lines = split /\n/, $text;
                     open my $w, ">>", $irc->{infile};
                     for my $msg (@lines) {
+
                         next unless $msg and defined $w;
+                        print localtime().": [mtx] $sender: $msg\n";
 
                         # send to IRC, split lines in chunks of ~maxmsg size if necessary
                         if (length $msg > $irc->{maxmsg}) {
