@@ -101,6 +101,15 @@ for (;;) {
                 my $text = (defined $ev->{content}->{body}) ? $ev->{content}->{body} : "";
                 next if $mat->{bot} eq $sender or not $text;
 
+                my $url = (defined $ev->{content}->{url}) ? $ev->{content}->{url} : "";
+                if ($url =~ /^mxc:/) {
+
+                    # rework url to something browsers understand
+                    (my $srv = $url) =~ s#mxc://([a-z\.]+)/.*$#$1#;
+                    (my $id = $url) =~ s#.*/(\w*)#$1#;
+                    $text = "https://$srv/_matrix/media/r0/download/$srv/$id ($text)";
+                }
+
                 if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
 
                     # relay to telegram
