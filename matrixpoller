@@ -45,7 +45,8 @@ eval {
 };
 if ($@) {
     print "Error in json decode $@\n";
-    print $dbg $out, $err if defined $dbg;
+    print $out, $err;
+    #print $dbg $out, $err if defined $dbg;
     exit 1;
 }
 
@@ -55,7 +56,7 @@ my $inode = (stat($mat->{infile}))[1];
 # SEEK_END
 seek($tail, 0, 2) or die @_;
 for (;;) {
-    sleep 10; # not to get too tight loop
+    sleep 5; # not to get too tight loop
 
     # check if logfiles haven't turned over below our feet
     if ($inode != (stat($mat->{infile}))[1]) {
@@ -116,7 +117,8 @@ for (;;) {
                     my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
                     eval { $telmsg = uri_escape("[mtx] $sender: $text"); };
                     $telmsg = uri_escape_utf8("[mtx] $sender: $text") if $@;
-                    qx( curl -s "$URL$telmsg" );
+                    my $telcurl = qx( curl -s "$URL$telmsg" );
+                    print "Curl: $telcurl\n";
                 }
 
                 # relay to IRC
