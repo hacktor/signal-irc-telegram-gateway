@@ -1,47 +1,47 @@
 [common]
-sendalarm	    = "/home/hermod/bin/alarm"
+sendalarm   = "/home/hermod/bin/alarm"
 
 [irc]
-UseSSL	        = 1
-channel	        = "#hermod"
-debug	        = "/home/hermod/log/irc.debug"
-ident	        = "hermod"
-infile	        = "/home/hermod/log/toirc.log"
-ircname	        = "Hermod Gateway"
-maxmsg	        = 300
-nick	        = "hermod"
-node	        = "irc.freenode.net"
-password	    = "********"
-port	        = 6697
-showjoin	    = 1
-showquit	    = 1
+UseSSL      = 1
+channel     = "#hermod"
+debug       = "/home/hermod/log/irc.debug"
+ident       = "hermod"
+infile      = "/home/hermod/log/toirc.log"
+ircname     = "Hermod Gateway"
+maxmsg      = 300
+nick        = "hermod"
+node        = "irc.freenode.net"
+password    = "********"
+port        = 6697
+showjoin    = 1
+showquit    = 1
 
 [matrix]
-bot	            = "@hermod:matrix.org"
-debug	        = "/home/hermod/log/matrix.debug"
-infile	        = "/home/hermod/log/tomatrix.log"
-posturl	        = "https://matrix.org/_matrix/client/r0/rooms/__ROOM__/send/m.room.message?access_token=__TOKEN__"
-room	        = "!xxxxxxxxxxxxxxxxxx:matrix.org"
-since	        = "s9999999999_99999"
-syncurl	        = "https://matrix.org/_matrix/client/r0/sync?since=__SINCE__&access_token=__TOKEN__"
-token	        = "XXXXXXXXXXXX-XXXXXXXXXXXX"
+bot         = "@hermod:matrix.org"
+debug       = "/home/hermod/log/matrix.debug"
+infile      = "/home/hermod/log/tomatrix.log"
+posturl     = "https://matrix.org/_matrix/client/r0/rooms/__ROOM__/send/m.room.message?access_token=__TOKEN__"
+room        = "!xxxxxxxxxxxxxxxxxx:matrix.org"
+since       = "s9999999999_99999"
+syncurl     = "https://matrix.org/_matrix/client/r0/sync?since=__SINCE__&access_token=__TOKEN__"
+token       = "XXXXXXXXXXXX-XXXXXXXXXXXX"
 
 [signal]
-anon	        = "Hacker"
-attachments	    = "/var/www/html/signal"
-cli	            = "/home/hermod/bin/signal-cli"
-db	            = "/home/hermod/db/ppnl/signal.db"
-debug	        = "/home/hermod/log/signal.debug"
-gid	            = "xxxxxxxxxxxxxxxxxx+xxx=="
-infile	        = "/home/hermod/log/tosignal.log"
-phone	        = "+31177113"
-url	            = "http://example.com/signal"
+anon        = "Hacker"
+attachments = "/var/www/html/signal"
+cli         = "/home/hermod/bin/signal-cli"
+db          = "/home/hermod/db/ppnl/signal.db"
+debug       = "/home/hermod/log/signal.debug"
+gid         = "xxxxxxxxxxxxxxxxxx+xxx=="
+infile      = "/home/hermod/log/tosignal.log"
+phone       = "+31177113"
+url         = "http://example.com/signal"
 
 [telegram]
-attachments	    = "/var/www/html/telegram"
-chat_id	        = "-1111111111111"
-db	            = "/home/hermod/db/telegram.db"
-debug	        = "/home/hermod/log/telegramhook.debug"
-token	        = "999999999:XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-url	            = "http://example.com/telegram"
+attachments = "/var/www/html/telegram"
+chat_id     = "-1111111111111"
+db          = "/home/hermod/db/telegram.db"
+debug       = "/home/hermod/log/telegramhook.debug"
+token       = "999999999:XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+url         = "http://example.com/telegram"
 
