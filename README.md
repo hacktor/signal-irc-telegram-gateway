@@ -51,15 +51,6 @@ appropriately
         "infile": "/var/www/log/toirc.log",
         "debug": "/var/www/log/irc.debug"
     },
-    "twitter": {
-        "consumer_key": "xxxxxxxxxxxxxxxxxxxx",
-        "consumer_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-        "token": "xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxx",
-        "token_secret": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "screen_names": [],
-        "tags": [],
-        "tick": 300
-    }
     "matrix": {
         "token": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "room": "!xxxxxxxxxxxxxxxxxx:matrix.org",
@@ -140,19 +131,6 @@ The photo's and attachments send by people in telegram and signal groups are dow
 
 The **signal-cli** program by default saves all attachments in a directory **~/.local/share/signal-cli/attachments**. The easiest way to handle this is to move this entire directory to somewhere below the documentroot of the webserver and symlink it.
 
-## following twitter accounts
-
-It is possible to follow twitter accounts. New statuses of these accounts will be posted by the bot. For this functionality you have to setup a [Twitter App](https://developer.twitter.com/en/apps). Fill in the **consumer\_key**, **consumer\_secret**, **token** and **token\_secret** from the app in /etc/hermod.json as well as a list of **screen\_names** you want to follow.
-
-The **twitterpoller** script polls twitter for **screen\_names** and **tags**, relaying newly found statusses. It is possible to skip statuses that are retweets or reply by defining either **twitter-\>noretweet** or **twitter-\>noreply** in hermod.json.
-
-You also need to create an sqlite database for twitter statuses, to weed out double (re)tweets
-```sql
-sqlite> CREATE TABLE status (id TEXT, ts DATE DEFAULT (datetime('now','localtime')));
-sqlite> CREATE UNIQUE INDEX status_id_idx ON status (id);
-```
-Make sure this database file is writeable by the webserver user.
-
 ## Start the IRC bot
 
 Verify permissions on the **signal-\>infile** and **irc-\>infile** files. Both should be writable by the user running the scripts and also by the webserver that is executing the telegram webHook. Then you can start the bot.
@@ -177,6 +155,5 @@ You probably want to run these in screen(1) from cron
 ```bash
 @reboot screen -S hermod -d -m while true; do /home/hermod/bin/hermod; done
 @reboot screen -S signal -d -m while true; do /home/hermod/bin/signalpoller; done
-@reboot screen -S twitter -d -m while true; do /home/hermod/bin/twitterpoller; done
 @reboot screen -S matrix -d -m while true; do /home/hermod/bin/matrixpoller; done
 ```

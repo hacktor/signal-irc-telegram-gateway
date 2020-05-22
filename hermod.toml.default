@@ -45,14 +45,3 @@ debug	        = "/home/hermod/log/telegramhook.debug"
 token	        = "999999999:XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 url	            = "http://example.com/telegram"
 
-[twitter]
-chat_id	        = "xxxxxxxxxxxxx"
-consumer_key	= "qqqqqqqqqqqqqqqqqqqqqqqqq"
-consumer_secret	= "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
-db	            = "/home/hermod/db/twitter.db"
-debug	        = "/home/hermod/log/twitter.debug"
-screen_names	= ["HackTorIT", "Telegram"]
-tags	        = ["chatbot"]
-tick	        = 60
-token	        = "999999999999999999-xxxxxxxxxxxxxxxxxxx"
-token_secret	= "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"

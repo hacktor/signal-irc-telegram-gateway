@@ -33,14 +33,6 @@
         "maxmsg": 300,
         "infile": "/var/www/log/toirc.log",
         "debug": "/var/www/log/irc.debug"
-    },
-    "twitter": {
-        "consumer_key": "xxxxxxxxxxxxxxxxxxxx",
-        "consumer_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-        "token": "xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxx",
-        "token_secret": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "screen_names": [],
-        "tick": 300
     }
 }
 
