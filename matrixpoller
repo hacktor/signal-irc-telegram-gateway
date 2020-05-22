@@ -10,12 +10,16 @@
 
 use strict;
 use JSON;
+use TOML;
 use URI::Escape;
 use Capture::Tiny 'capture';
 my $msg;
 
-open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
-my $cfg = decode_json do { local $/; <$fh> };
+open my $fh, '<', "hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 
 unless (defined $mat->{token} and defined $mat->{room} and defined  $mat->{since}
