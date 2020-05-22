@@ -10,11 +10,15 @@ use strict;
 use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::IRC::Plugin::BotAddressed Component::SSLify);
 use URI::Escape;
 use JSON qw( decode_json );
+use TOML;
 use DBI;
 
-open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
-my $cfg = decode_json do { local $/; <$fh> };
-close $fh;
+open my $fh, '<', "hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
+
 open my $dbg, ">>", $cfg->{irc}->{debug} if defined $cfg->{irc}->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
