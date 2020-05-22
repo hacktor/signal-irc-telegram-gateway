@@ -10,14 +10,18 @@
 
 use strict;
 use JSON;
+use TOML;
 use WWW::Curl::Easy;
 use WWW::Curl::Form;
 use URI::Escape;
 use DBI;
 use Capture::Tiny 'tee';
 
-open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
-my $cfg = decode_json do { local $/; <$fh> };
+open my $fh, '<', "hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
 
 unless (defined $cfg->{signal}->{phone} and defined $cfg->{signal}->{cli} and
         defined $cfg->{signal}->{gid}) {
