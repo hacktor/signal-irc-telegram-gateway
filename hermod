@@ -13,7 +13,7 @@ use JSON qw( decode_json );
 use TOML;
 use DBI;
 
-open my $fh, '<', "hermod.toml" or die "error opening configuration $!";
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
 unless ($cfg) {
     die "Error parsing toml: $e";

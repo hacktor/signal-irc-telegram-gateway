@@ -17,7 +17,7 @@ use URI::Escape;
 use DBI;
 use Capture::Tiny 'tee';
 
-open my $fh, '<', "hermod.toml" or die "error opening configuration $!";
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
 unless ($cfg) {
     die "Error parsing toml: $e";
@@ -110,7 +110,7 @@ for (;;) {
             $anonsender = $sig->{nicks}->{$sender};
         } else {
 
-            $anonsender =~ s/.*(\d\d\d\d)$/$sig->{anon}-$1/;
+            $anonsender =~ s/.*(\d\d\d\d)$/$cfg->{common}->{anon}-$1/;
             $sig->{nicks}->{$sender} = $anonsender;
             nickhelp($sig,$sender,$anonsender);
             setalias($sig,$sender,$anonsender);

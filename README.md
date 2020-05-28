@@ -12,60 +12,12 @@ Reference: [Telegram Bot API](https://core.telegram.org/bots/api "Bot API")
 
 ## Configuration
 
-Make a copy of the file hermod.json.example to /etc/hermod.json and change values
+Make a copy of the file hermod.toml.example to /etc/hermod.toml and change values
 appropriately
-```json
-{       
-    "common": {
-        "errorsend": "/home/hermod/bin/notify.pl"
-    },
-    "signal": {
-        "phone": "+316xxxxxxxxxx",
-        "gid": "XXXXXXXXXXXXXXXXXXXXX==",
-        "cli": "/home/hermod/bin/signal-cli",
-        "infile": "/home/hermod/log/tosignal.log",
-        "db": "/home/hermod/var/signal.db",
-        "debug": "/home/hermod/log/signal.debug",
-        "anon": "Anonymous",
-        "attachments": "/var/www/html/signal",
-        "url": "https://hermod.example.com/signal"
-    },  
-    "telegram": {
-        "token":  "999999999:xxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx",
-        "chat_id": "-19999999",
-        "forward": 1,
-        "debug": "/home/hermod/log/telegram.debug",
-        "attachments": "/var/www/html/telegram",
-        "url": "https://hermod.example.com/telegram"
-    },  
-    "irc": {
-        "node": "irc.freenode.net",
-        "channel": "#channel",
-        "nick": "gateway",
-        "password": "xxxxxxxx",
-        "ident": "hermod",
-        "ircname": "Hermod Gateway",
-        "port": 6697,
-        "UseSSL": 1,
-        "maxmsg": 400,
-        "infile": "/var/www/log/toirc.log",
-        "debug": "/var/www/log/irc.debug"
-    },
-    "matrix": {
-        "token": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "room": "!xxxxxxxxxxxxxxxxxx:matrix.org",
-        "bot": "@gateway:matrix.org",
-        "debug": "/var/www/log/matrix.debug",
-        "infile": "/var/www/log/tomatrix.log",
-        "syncurl": "https://matrix.org/_matrix/client/r0/sync?since=__SINCE__&access_token=__TOKEN__",
-        "posturl": "https://matrix.org/_matrix/client/r0/rooms/__ROOM__/send/m.room.message?access_token=__TOKEN__",
-        "since": "s1371516656_757269739_2333033_498970033_329640559_1201381_52875555_50274419_99428"
-    }
-}
-```
+
 For more detailed information on the various configuration options, consult the [Wiki](./wiki)
 
-**signal-\>phone** is the phone number used by signal-cli. It has to be added to the group (**signal-\>gid**). **signal-\>anon** is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with **signal-cli**
+**signal-\>phone** is the phone number used by signal-cli. It has to be added to the group (**signal-\>gid**). **common-\>anon** is a string used to partly anonymize telephone numbers when relaying messages to the other channels. Then the phone number has to be registered with **signal-cli**
 
 Refer to the [Telegram Bot API](https://core.telegram.org/bots/api) for details about **telegram-\>token** and **telegram-\>chat\_id**
 

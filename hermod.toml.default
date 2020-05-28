@@ -1,5 +1,6 @@
 [common]
 sendalarm   = "/home/hermod/bin/alarm"
+anon        = "Anonymous"
 
 [irc]
 UseSSL      = 1
@@ -27,7 +28,6 @@ syncurl     = "https://matrix.org/_matrix/client/r0/sync?since=__SINCE__&access_
 token       = "XXXXXXXXXXXX-XXXXXXXXXXXX"
 
 [signal]
-anon        = "Hacker"
 attachments = "/var/www/html/signal"
 cli         = "/home/hermod/bin/signal-cli"
 db          = "/home/hermod/db/ppnl/signal.db"
