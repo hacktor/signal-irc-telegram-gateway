@@ -12,11 +12,15 @@
 use strict;
 use CGI::Fast qw/:standard/;
 use JSON;
+use TOML;
 use Text::Unidecode;
 use DBI;
 
-open my $fh, '<', "/etc/hermod.json" or die "error opening configuration $!";
-my $cfg = decode_json do { local $/; <$fh> };
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
 
 # communicate with bot through logfiles
 open my $irc, '>>:utf8', $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
