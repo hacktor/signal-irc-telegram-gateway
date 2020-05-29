@@ -35,6 +35,7 @@ open my $dbg, ">>", $sig->{debug} if defined $sig->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 # tailing signal infile and telegram downloads for stuff to send
 open my $tail, "<", $sig->{infile} or die @_;
@@ -131,13 +132,8 @@ for (;;) {
 
                 $text = "[sig] $text";
 
-                if (defined $irc->{infile}) {
-
-                    # notify the irc chat
-                    open $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-                    print $w "$text";
-                    close $w;
-                }
+                # notify chats
+                relay($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
 
                 if (defined $tel->{token} and defined $tel->{chat_id}) {
 
@@ -154,10 +150,7 @@ for (;;) {
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            open my $w, ">>", $irc->{infile} or die "Died opening irc infile $irc->{infile}";
-            print $w "CMD!SIG!users\n";
-            close $w;
-
+            relay("CMD!SIG!users\n", $irc->{infile});
             next;
         }
 
@@ -193,12 +186,11 @@ for (;;) {
             close $w;
         }
 
-        # relay to Matrix
-        if (defined $mat->{infile} and $text =~ /\w/) {
+        # relay to Matrix, Whatsapp
+        if ($text =~ /\w/) {
 
-            open my $w, ">>", $mat->{infile};
-            print $w "[sig] $anonsender: $text\n" if defined $w;
-            close $w;
+            my $msg = "[sig] $anonsender: $text\n";
+            relay("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
         }
 
         # relay optional attachments
@@ -233,23 +225,18 @@ for (;;) {
                 }
             }
 
-            # relay to irc
-            if (defined $irc->{infile}) {
-
-                open my $w, ">>", $irc->{infile};
-                print $w $msg if defined $w;
-                close $w;
-            }
-
-            # relay to matrix
-            if (defined $mat->{infile}) {
-
-                open my $w, ">>", $mat->{infile};
-                print $w $msg if defined $w;
-                close $w;
-            }
+            # relay to irc, matrix, whatsapp
+            relay($msg, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
         }
     }
+}
+
+sub relay {
+    my ($msg, $infile) = @_;
+    return unless $infile and $msg;
+    open my $w, ">>", $infile;
+    print $w $msg if defined $w;
+    close $w;
 }
 
 sub getalias {
