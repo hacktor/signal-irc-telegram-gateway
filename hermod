@@ -23,6 +23,7 @@ open my $dbg, ">>", $cfg->{irc}->{debug} if defined $cfg->{irc}->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
 
@@ -97,6 +98,7 @@ sub irc_public {
     relay2tel($tel->{chat_id},$text) if defined $tel;
     relay($sig->{infile},$text) if defined $sig;
     relay($mat->{infile},$text) if defined $mat;
+    relay($wha->{infile},$text) if defined $wha;
 }
 
 sub irc_msg {
