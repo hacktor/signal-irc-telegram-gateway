@@ -50,4 +50,6 @@ groupid         = "11111111111-1111111111@g.us"
 infile          = "/home/hermod/log/towhatsapp.log"
 debug           = "/home/hermod/log/whatsapp.debug"
 attachments     = "/var/www/html/whatsapp"
+url             = "http://example.com/whatsapp"
 session         = "/home/hermod/db/whatsappsession.gob"
+
