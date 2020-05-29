@@ -22,6 +22,7 @@ my $cfg = decode_json do { local $/; <$fh> };
 open my $irc, '>>:utf8', $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
 open my $sig, '>>:utf8', $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
 open my $mat, '>>:utf8', $cfg->{matrix}->{infile} if defined $cfg->{matrix}->{infile};
+open my $wha, '>>:utf8', $cfg->{whatsapp}->{infile} if defined $cfg->{whatsapp}->{infile};
 open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
 
 unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
@@ -115,6 +116,7 @@ while (my $cgi = CGI::Fast->new) {
             print $irc $text if defined $irc;
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
+            print $wha $text if defined $wha;
             ok("forwarded msg: $msg->{text} from $title\n");
         }
 
@@ -133,6 +135,7 @@ while (my $cgi = CGI::Fast->new) {
             print $irc $text if defined $irc;
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
+            print $wha $text if defined $wha;
             ok("New member(s): $members\n");
         }
         
@@ -143,6 +146,7 @@ while (my $cgi = CGI::Fast->new) {
             print $irc $text if defined $irc;
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
+            print $wha $text if defined $wha;
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
 
@@ -170,8 +174,9 @@ while (my $cgi = CGI::Fast->new) {
 
         }
 
-        # send to matrix
+        # send to matrix, whatsapp
         print $mat "[tel] $first $last: $text\n" if defined $mat;
+        print $wha "[tel] $first $last: $text\n" if defined $wha;
 
         # for signal, skip documents, photo's. they've been sent already.
         print $sig "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;

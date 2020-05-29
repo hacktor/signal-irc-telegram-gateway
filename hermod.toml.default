@@ -30,7 +30,7 @@ token       = "XXXXXXXXXXXX-XXXXXXXXXXXX"
 [signal]
 attachments = "/var/www/html/signal"
 cli         = "/home/hermod/bin/signal-cli"
-db          = "/home/hermod/db/ppnl/signal.db"
+db          = "/home/hermod/db/signal.db"
 debug       = "/home/hermod/log/signal.debug"
 gid         = "xxxxxxxxxxxxxxxxxx+xxx=="
 infile      = "/home/hermod/log/tosignal.log"
@@ -45,3 +45,9 @@ debug       = "/home/hermod/log/telegramhook.debug"
 token       = "999999999:XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 url         = "http://example.com/telegram"
 
+[whatsapp]
+groupid         = "11111111111-1111111111@g.us"
+infile          = "/home/hermod/log/towhatsapp.log"
+debug           = "/home/hermod/log/whatsapp.debug"
+attachments     = "/var/www/html/whatsapp"
+session         = "/home/hermod/db/whatsappsession.gob"
