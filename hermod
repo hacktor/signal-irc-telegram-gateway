@@ -96,9 +96,7 @@ sub irc_public {
 
     my $text = "[irc] $nick: $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($sig->{infile},$text) if defined $sig;
-    relay($mat->{infile},$text) if defined $mat;
-    relay($wha->{infile},$text) if defined $wha;
+    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
 }
 
 sub irc_msg {
@@ -132,8 +130,7 @@ sub irc_ctcp_action {
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] ***$nick $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($sig->{infile},$text) if defined $sig;
-    relay($mat->{infile},$text) if defined $mat;
+    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
 }
 
 sub irc_nick {
@@ -143,8 +140,7 @@ sub irc_nick {
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[irc] $nick is now known as $who\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($sig->{infile},$text) if defined $sig;
-    relay($mat->{infile},$text) if defined $mat;
+    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
 }
 
 sub irc_join {
@@ -156,8 +152,7 @@ sub irc_join {
     my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
-        relay($sig->{infile},$text) if defined $sig;
-        relay($mat->{infile},$text) if defined $mat;
+        relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
     }
 }
 
@@ -169,8 +164,7 @@ sub irc_quit {
     my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
-        relay($sig->{infile},$text)if defined $sig;
-        relay($mat->{infile},$text)if defined $mat;
+        relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
     }
 }
 
@@ -183,9 +177,12 @@ sub irc_353 {
     my $text = "IRC users: " . (join ', ', @users[2..$#users]) . "\n";
 
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
+
         $text .= "Signal users: " . signalusers() . "\n" if defined $sig->{db};
         relay2tel($tel->{chat_id},$text) if defined $tel;
+
     } elsif (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'SIG') {
+
         $text .= "Telegram users: " . teleusers() . "\n" if defined $tel->{db};
         relay($sig->{infile},$text) if defined $sig;
     }
@@ -264,6 +261,7 @@ sub relay2tel {
 
 sub relay {
     my ($file,$text) = @_;
+    return unless $file and $text;
 
     # write to some file
     open my $w, ">>", $file;
