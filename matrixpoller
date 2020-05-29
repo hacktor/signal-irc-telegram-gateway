@@ -32,6 +32,7 @@ open my $dbg, ">>", $mat->{debug} if defined $mat->{debug};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
+my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 (my $syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
 $syncurl =~ s/__TOKEN__/$mat->{token}/;
@@ -145,9 +146,10 @@ for (;;) {
                     close $w if defined $w;
                 }
 
-                # relay ro signal
-                if (defined $sig->{infile}) {
-                    open my $w, ">>", $sig->{infile} or die "Died opening signal infile $sig->{infile}";
+                # relay ro signal and whatsapp
+                for ($sig->{infile}, $wha->{infile}) {
+                    next unless $_;
+                    open my $w, ">>", $_ or die "Died opening infile $_";
                     print $w "[mtx] $sender: $text\n" if defined $w;
                     close $w if defined $w;
                 }
