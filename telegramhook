@@ -87,7 +87,7 @@ while (my $cgi = CGI::Fast->new) {
                 if ($? == 0) {
                     print $sig "FILE:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $sig;
                     print $mat "FILE:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $mat;
-                    print $wha "FILE:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $wha;
+                    print $wha "FILE:$doc->{mime_type}:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $wha;
                     $text = "** sends $type: $tel->{url}/$file";
                     $text .= " with caption: $caption" if $caption;
                 } else {
