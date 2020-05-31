@@ -59,14 +59,14 @@ for (;;) {
     my $msg ='';
     while (my $line = <$tail>) {
 
-        if ($line =~ /^FILE:/ and defined $tel->{attachments}) {
+        if ($line =~ /^FILE:/) {
 
             # send photo's, documents
             $line = substr $line,5;
             my ($file,$caption) = split / /, $line, 2; 
             my ($out, $err, $ret) = tee {
                 system($sig->{cli},"-u",$sig->{phone},"send","-g",$sig->{gid},
-                        "-m","$caption","-a","$tel->{attachments}/$file");
+                        "-m","$caption","-a","$file");
             };
             print $dbg $out, $err if defined $dbg;
             errorsend($err) if $err;
