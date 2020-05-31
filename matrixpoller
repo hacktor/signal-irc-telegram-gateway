@@ -51,7 +51,7 @@ eval {
 if ($@) {
     print "Error in json decode $@\n";
     print $out, $err;
-    #print $dbg $out, $err if defined $dbg;
+    print $dbg $out, $err if defined $dbg;
     exit 1;
 }
 
@@ -75,6 +75,16 @@ for (;;) {
 
     # send new messages to matrix group
     while (my $line = <$tail>) {
+
+        if ($line =~ /^FILE:/) {
+
+            # send photo's, documents
+            $line = substr $line,5;
+            my ($file,$caption) = split / /, $line, 2;
+
+            # TODO upload file
+            next;
+        }
 
         chomp $line;
         $line =~ s/"/\\"/g;
