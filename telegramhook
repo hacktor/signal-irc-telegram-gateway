@@ -62,10 +62,11 @@ while (my $cgi = CGI::Fast->new) {
         my $caption = (defined $msg->{caption}) ? $msg->{caption} : "";
         
         # look for photo's and documents
-        my ($type,$doc);
+        my ($type,$doc,$mime);
         if (defined $msg->{photo}) {
             $doc = @{$msg->{photo}}[-1];
             $type = 'photo';
+            $mime = 'image';
         }
         foreach my $t ('voice', 'audio', 'document', 'video') { 
             if (defined $msg->{$t}) {
@@ -78,16 +79,26 @@ while (my $cgi = CGI::Fast->new) {
 
             # download the file
             my $response = qx( curl -s "https://api.telegram.org/bot$tel->{token}/getFile?file_id=$doc->{file_id}" );
+            print $dbg "$response\n" if defined $dbg;
             eval {
                 my $djfile = decode_json( $response );
                 my $path = $djfile->{result}->{file_path};
                 (my $file = $path) =~ s#.*/##;
+                (my $ext = $file) =~ s#.*\.##;
+
+                # hack mime-type
+                $ext = "jpeg" if $ext =~ /^jpg/i;
+                $mime = (defined $doc->{mime_type}) ? $doc->{mime_type} : "$mime/$ext";
+
                 my $name = (defined $doc->{file_name}) ? $doc->{file_name} : $file;
                 qx( wget -O $tel->{attachments}/$file https://api.telegram.org/file/bot$tel->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
-                    print $sig "FILE:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $sig;
-                    print $mat "FILE:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $mat;
-                    print $wha "FILE:$doc->{mime_type}:$tel->{attachments}/$file [sent by $first $last on telegram] $caption\n" if defined $wha;
+
+                    my $fline = "FILE:$mime:$tel->{attachments}/$file [tel] $first $last";
+                    $fline .= ": $caption" if $caption;
+                    print $sig "$fline\n" if defined $sig;
+                    print $mat "$fline\n" if defined $mat;
+                    print $wha "$fline\n" if defined $wha;
                     $text = "** sends $type: $tel->{url}/$file";
                     $text .= " with caption: $caption" if $caption;
                 } else {
@@ -182,10 +193,10 @@ while (my $cgi = CGI::Fast->new) {
 
         # send to matrix, whatsapp
         print $mat "[tel] $first $last: $text\n" if defined $mat;
-        print $wha "[tel] $first $last: $text\n" if defined $wha;
 
-        # for signal, skip documents, photo's. they've been sent already.
+        # for signal, whatsapp, skip documents, photo's. they've been sent already.
         print $sig "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
+        print $wha "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $wha;
     }
     ok();
 }

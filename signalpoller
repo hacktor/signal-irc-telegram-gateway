@@ -63,7 +63,8 @@ for (;;) {
 
             # send photo's, documents
             $line = substr $line,5;
-            my ($file,$caption) = split / /, $line, 2; 
+            my ($fileinfo,$caption) = split / /, $line, 2; 
+            my ($mime,$file) = split /:/, $fileinfo;
             my ($out, $err, $ret) = tee {
                 system($sig->{cli},"-u",$sig->{phone},"send","-g",$sig->{gid},
                         "-m","$caption","-a","$file");
