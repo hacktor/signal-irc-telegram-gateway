@@ -80,7 +80,7 @@ for (;;) {
 
             # send photo's, documents
             $line = substr $line,5;
-            my ($file,$caption) = split / /, $line, 2;
+            my ($fileinfo,$caption) = split / /, $line, 2;
 
             # TODO upload file
             next;
