@@ -110,7 +110,8 @@ while (my $cgi = CGI::Fast->new) {
         # is the message a sticker?
         if (defined $msg->{sticker}) {
             my $sticknam = (defined $msg->{sticker}->{set_name}) ? $msg->{sticker}->{set_name} : '';
-            $text .= "\nsends a $sticknam sticker ";
+            $text .= "\n" if $text;
+            $text .= "sends a $sticknam sticker ";
             $text .= $msg->{sticker}->{emoji} if defined $msg->{sticker}->{emoji};
         }
         
