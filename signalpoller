@@ -134,7 +134,7 @@ for (;;) {
                 $text = "[sig] $text";
 
                 # notify chats
-                relay($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
+                relayToFile($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
 
                 if (defined $tel->{token} and defined $tel->{chat_id}) {
 
@@ -151,7 +151,7 @@ for (;;) {
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            relay("CMD!SIG!users\n", $irc->{infile});
+            relayToFile("CMD!SIG!users\n", $irc->{infile});
             next;
         }
 
@@ -191,7 +191,7 @@ for (;;) {
         if ($text =~ /\w/) {
 
             my $msg = "[sig] $anonsender: $text\n";
-            relay("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
+            relayToFile("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
         }
 
         # relay optional attachments
@@ -209,6 +209,8 @@ for (;;) {
                 $msg = "[sig] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
             }
 
+            my $filemsg = "FILE:SIG:$att->{contentType}:$sig->{attachments}/$att->{id}.$ext [sig] $anonsender\n";
+
             # relay to telegram
             if (defined $tel->{chat_id}) {
 
@@ -217,7 +219,7 @@ for (;;) {
                 my $curlf = WWW::Curl::Form->new;
                 $curlf->formaddfile("$sig->{attachments}/$att->{id}.$ext", $type, "multipart/form-data");
                 $curlf->formadd("chat_id", "$tel->{chat_id}");
-                $curlf->formadd("caption", "[sig $ext $type sent by $anonsender]");
+                $curlf->formadd("caption", "[sig] $type sent by $anonsender");
                 $curl->setopt(CURLOPT_HTTPPOST, $curlf);
                 my $retcode = $curl->perform;
                 if ($retcode != 0) {
@@ -226,13 +228,16 @@ for (;;) {
                 }
             }
 
-            # relay to irc, matrix, whatsapp
-            relay($msg, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
+            # relay to Matrix, Whatsapp
+            relayToFile($filemsg, $_) for $mat->{infile}, $wha->{infile};
+
+            # relay to irc, matrix
+            relayToFile($msg, $_) for $irc->{infile}, $mat->{infile};
         }
     }
 }
 
-sub relay {
+sub relayToFile {
     my ($msg, $infile) = @_;
     return unless $infile and $msg;
     open my $w, ">>", $infile;
