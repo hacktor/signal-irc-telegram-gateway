@@ -283,13 +283,13 @@ sub errorsend {
 
     # filters here
     if ($err =~ /Failed to send \(some\) messages:/) {
-        while ($err =~ /Unregistered user (\+[\d]+): null/g) {
+        while ($err =~ /Untrusted Identity for "(\+[\d]+)"/g) {
             unless (defined $sig->{unreg}->{$1}) {
                 $sig->{unreg}->{$1} = 1;
                 $msg .= " $1";
             }
         }
-        $msg = "Unregistered users: $msg\n" if $msg;
+        $msg = "Untrusted users: $msg\n" if $msg;
     } else {
         $msg = $err;
     }
@@ -298,3 +298,4 @@ sub errorsend {
 
     qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
 }
+
