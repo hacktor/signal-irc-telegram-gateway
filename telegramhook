@@ -94,7 +94,7 @@ while (my $cgi = CGI::Fast->new) {
                 qx( wget -O $tel->{attachments}/$file https://api.telegram.org/file/bot$tel->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
 
-                    my $fline = "FILE:TEL:$mime:$tel->{attachments}/$file [tel] $first $last";
+                    my $fline = "FILE:$tel->{url}:$mime:$tel->{attachments}/$file [tel] $first $last";
                     $fline .= ": $caption" if $caption;
                     print $sig "$fline\n" if defined $sig;
                     print $mat "$fline\n" if defined $mat;

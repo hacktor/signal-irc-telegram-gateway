@@ -194,15 +194,23 @@ sub irc_tail_input {
     my ($kernel, $sender, $input) = @_[KERNEL, SENDER, ARG1];
     next unless $input;
 
+    # check for files
+    if ($input =~ /^FILE:/) {
+
+        $line = substr $line,5;
+        my ($fileinfo,$caption) = split / /, $line, 2; chomp $caption;
+        my ($url,$mime) = split /:/, $fileinfo;
+        $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, "$caption: $url\n" );
+
     # check for commands
-    if ($input =~ /^CMD!TEL!users/) {
+    } elsif ($input =~ /^CMD!TEL!users/) {
         $irc->yield( names => $cfg->{irc}->{channel} );
         $cfg->{irc}->{names_asked} = 'TEL';
-        return;
     } elsif ($input =~ /^CMD!SIG!users/) {
         $irc->yield( names => $cfg->{irc}->{channel} );
         $cfg->{irc}->{names_asked} = 'SIG';
-        return;
+
+    # send the message as is
     } else {
         $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, $input );
     }
