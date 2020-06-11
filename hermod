@@ -195,11 +195,11 @@ sub irc_tail_input {
     next unless $input;
 
     # check for files
-    if ($input =~ /^FILE:/) {
+    if ($input =~ /^FILE!/) {
 
         $input = substr $input,5;
         my ($fileinfo,$caption) = split / /, $input, 2; chomp $caption;
-        my ($url,$mime) = split /:/, $fileinfo;
+        my ($url,$mime) = split /!/, $fileinfo;
         $kernel->post( $sender, 'privmsg', $cfg->{irc}->{channel}, "$caption: $url\n" );
 
     # check for commands

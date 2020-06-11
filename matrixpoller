@@ -76,12 +76,12 @@ for (;;) {
     # send new messages to matrix group
     while (my $line = <$tail>) {
 
-        if ($line =~ /^FILE:/) {
+        if ($line =~ /^FILE!/) {
 
             # send photo's, documents
             $line = substr $line,5;
             my ($fileinfo,$caption) = split / /, $line, 2;
-            my ($url,$mime,$filepath) = split /:/, $fileinfo;
+            my ($url,$mime,$filepath) = split /!/, $fileinfo;
 
             # TODO upload file
             next;

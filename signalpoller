@@ -59,12 +59,12 @@ for (;;) {
     my $msg ='';
     while (my $line = <$tail>) {
 
-        if ($line =~ /^FILE:/) {
+        if ($line =~ /^FILE!/) {
 
             # send photo's, documents
             $line = substr $line,5;
             my ($fileinfo,$caption) = split / /, $line, 2; 
-            my ($url,$mime,$file) = split /:/, $fileinfo;
+            my ($url,$mime,$file) = split /!/, $fileinfo;
             my ($out, $err, $ret) = tee {
                 system($sig->{cli},"-u",$sig->{phone},"send","-g",$sig->{gid},
                         "-m","$caption","-a","$file");
@@ -209,7 +209,7 @@ for (;;) {
                 $msg = "[sig] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
             }
 
-            my $filemsg = "FILE:$sig->{url}/$att->{id}.$ext:$att->{contentType}:$sig->{attachments}/$att->{id}.$ext [sig] $anonsender\n";
+            my $filemsg = "FILE!$sig->{url}/$att->{id}.$ext!$att->{contentType}!$sig->{attachments}/$att->{id}.$ext [sig] $anonsender\n";
 
             # relay to telegram
             if (defined $tel->{chat_id}) {
