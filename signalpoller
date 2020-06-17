@@ -293,7 +293,9 @@ sub errorsend {
     } else {
         $msg = $err;
     }
-    return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 3600;
+
+    # notify daily on errors
+    return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 86400;
     $sig->{errors}->{$msg} = time;
 
     qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
