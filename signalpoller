@@ -70,7 +70,7 @@ for (;;) {
                         "-m","$caption","-a","$file");
             };
             print $dbg $out, $err if defined $dbg;
-            errorsend($err) if $err;
+            notify($err) if $err;
         } else {
             $msg .= $line;
         }
@@ -81,7 +81,7 @@ for (;;) {
             system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", "$msg");
         };
         print $dbg $out, $err if defined $dbg;
-        errorsend($err) if $err;
+        notify($err) if $err;
     }
 
     # now poll the signal group for new messages
@@ -90,7 +90,7 @@ for (;;) {
         system($sig->{cli},"-u",$sig->{phone},"receive","--json");
     };
     print $dbg $out, $err if defined $dbg;
-    errorsend($err) if $err;
+    notify($err) if $err;
 
     my @lines = split /\n/, $out;
     for my $line (@lines) {
@@ -273,10 +273,10 @@ sub nickhelp {
         system($sig->{cli},"-u",$sig->{phone},"send","-m","$text",$phone);
     };
     print $dbg $out, $err if defined $dbg;
-    errorsend($err) if $err;
+    notify($err) if $err;
 }
 
-sub errorsend {
+sub notify {
     my $err = shift;
     my $msg = '';
     my $hostname = qx( hostname ); chomp $hostname;
@@ -298,6 +298,6 @@ sub errorsend {
     return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 86400;
     $sig->{errors}->{$msg} = time;
 
-    qx( $cfg->{common}->{errorsend} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{errorsend} and $msg;
+    qx( $cfg->{common}->{notify} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{notify} and $msg;
 }
 

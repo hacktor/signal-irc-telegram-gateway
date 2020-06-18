@@ -1,5 +1,5 @@
 [common]
-sendalarm   = "/home/hermod/bin/alarm"
+notify      = "/home/hermod/bin/alarm"
 anon        = "Anonymous"
 
 [irc]
