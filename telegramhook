@@ -104,7 +104,19 @@ while (my $cgi = CGI::Fast->new) {
                 }
             }
         }
-        
+
+        # is the message a poll?
+        if (defined $msg->{poll}) {
+
+            my $p = $msg->{poll};
+            $text .= "\n" if $text;
+            $text .= "Poll: $p->{question}\n";
+            my $i;
+            for my $o (@{$p->{options}}) {
+                $text .= ++$i.") $o->{text}\n";
+            }
+        }
+
         # is the message a sticker?
         if (defined $msg->{sticker}) {
             my $sticknam = (defined $msg->{sticker}->{set_name}) ? $msg->{sticker}->{set_name} : '';
