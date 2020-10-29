@@ -79,7 +79,7 @@ sub irc_public {
     my $nick = ( split /!/, $who )[0];
 
     # catch commands
-    if ($what =~ /^!users/) {
+    if ($what =~ /^!users/i) {
 
         # send names to IRC, split lines in chunks of ~maxmsg size if necessary
         for my $text (teleusers(),signalusers()) {
@@ -92,11 +92,15 @@ sub irc_public {
             }
         }
         return;
+
+    } elsif ($what =~ /^!whatsapp/i) {
+
+        return;
     }
 
     my $text = "[irc] $nick: $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+    relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_msg {
@@ -130,7 +134,7 @@ sub irc_ctcp_action {
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] ***$nick $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+    relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_nick {
@@ -140,7 +144,7 @@ sub irc_nick {
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[irc] $nick is now known as $who\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
-    relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+    relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_join {
@@ -152,7 +156,7 @@ sub irc_join {
     my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
-        relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+        relay($_,$text) for $sig->{infile}, $mat->{infile};
     }
 }
 
@@ -164,7 +168,7 @@ sub irc_quit {
     my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
-        relay($_,$text) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+        relay($_,$text) for $sig->{infile}, $mat->{infile};
     }
 }
 

@@ -53,6 +53,7 @@ while (my $cgi = CGI::Fast->new) {
     # check type of msg and chat_id
     if (defined $dj->{message}->{chat}->{id} and $dj->{message}->{chat}->{id} == $tel->{chat_id}) {
 
+        my ($fline,$ircfline);
         my $msg = $dj->{message};
         my $user_id = (defined $msg->{from}->{id} and $msg->{from}->{id} =~ /^\d+$/) ?
             $dj->{'message'}->{'from'}->{id} : 0;
@@ -94,19 +95,28 @@ while (my $cgi = CGI::Fast->new) {
                 qx( wget -O $tel->{attachments}/$file https://api.telegram.org/file/bot$tel->{token}/$path >/dev/null 2>&1 );
                 if ($? == 0) {
 
-                    my $fline = "FILE!$tel->{url}!$mime!$tel->{attachments}/$file [tel] $first $last";
+                    $fline = "FILE!$tel->{url}!$mime!$tel->{attachments}/$file [tel] $first $last";
                     $fline .= ": $caption" if $caption;
-                    print $sig "$fline\n" if defined $sig;
-                    print $mat "$fline\n" if defined $mat;
-                    print $wha "$fline\n" if defined $wha;
-                    $text = "** sends $type: $tel->{url}/$file";
-                    $text .= " with caption: $caption" if $caption;
+                    $ircfline = "** sends $type: $tel->{url}/$file";
+                    $ircfline .= " with caption: $caption" if $caption;
                 } else {
                     print $dbg "Error getting $type $name $file\n" if defined $dbg;
                 }
             }
         }
-        
+
+        # is the message a poll?
+        if (defined $msg->{poll}) {
+
+            my $p = $msg->{poll};
+            $text .= "\n" if $text;
+            $text .= "Poll: $p->{question}\n";
+            my $i;
+            for my $o (@{$p->{options}}) {
+                $text .= ++$i.") $o->{text}\n";
+            }
+        }
+
         # is the message a sticker?
         if (defined $msg->{sticker}) {
             my $sticknam = (defined $msg->{sticker}->{set_name}) ? $msg->{sticker}->{set_name} : '';
@@ -130,12 +140,12 @@ while (my $cgi = CGI::Fast->new) {
                 (defined $msg->{forward_from_chat}->{first_name}) ? $msg->{forward_from_chat}->{first_name} : "Forward";
             $title = $msg->{forward_from_chat}->{first_name} unless $title;
 
-            $text = "[Fwd from $title]: $msg->{text}\n";
-            print $irc $text if defined $irc;
-            print $sig $text if defined $sig;
-            print $mat $text if defined $mat;
-            print $wha $text if defined $wha;
-            ok("forwarded msg: $msg->{text} from $title\n");
+            $text = "[Fwd from $title]: ";
+            $text .= ($msg->{text}) ? "$msg->{text}\n" : "\n";
+            if ($ircfline) {
+                $ircfline =~ s/\*\* sends //;
+            }
+            #ok("forwarded msg: $msg->{text} from $title\n");
         }
 
         # is the message a channel post?
@@ -177,8 +187,9 @@ while (my $cgi = CGI::Fast->new) {
             ok("!users command relayed for $first $last\n");
         }
 
-        # split lines and write to log for irc, matrix
-        my @lines = split /\n/, $text;
+        # split lines and write to log for irc, matrix, optional prepend forwarded file
+        my $ftext = ($ircfline) ? "$text\n$ircfline" : $text;
+        my @lines = split /\n/, $ftext;
         for my $msg (@lines) {
             next unless $msg;
 
@@ -192,12 +203,17 @@ while (my $cgi = CGI::Fast->new) {
 
         }
 
-        # send to matrix, whatsapp
-        print $mat "[tel] $first $last: $text\n" if defined $mat;
+        # send to matrix
+        print $mat "[tel] $first $last: $ftext\n" if defined $mat;
 
         # for signal, whatsapp, skip documents, photo's. they've been sent already.
         print $sig "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
         print $wha "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $wha;
+
+        # optionaly print file line
+        print $sig "$fline\n" if defined $sig and $fline;
+        print $mat "$fline\n" if defined $mat and $fline;
+        print $wha "$fline\n" if defined $wha and $fline;
     }
     ok();
 }
