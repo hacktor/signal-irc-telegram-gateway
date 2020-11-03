@@ -256,7 +256,11 @@ sub _default {
     }
     print join ' ', @output, "\n";
     print $dbg join ' ', @output, "\n" if defined $dbg;
-    die "I got disconnected :( :(\nKilling myself..\n" if grep(/irc_disconnect/,@output);
+    if (grep(/irc_disconnect/,@output)) {
+        my $hostname = qx( hostname -f );
+        qx( $cfg->{common}->{notify} "Hermod died on $hostname\n" ) if defined $cfg->{common}->{notify};
+        die "I got disconnected :( :(\nKilling myself..\n";
+    }
 }
 
 sub relay2tel {
