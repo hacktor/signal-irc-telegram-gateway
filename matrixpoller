@@ -13,6 +13,8 @@ use JSON;
 use TOML;
 use URI::Escape;
 use Capture::Tiny 'capture';
+use Hermod;
+
 my $msg;
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
@@ -32,6 +34,7 @@ open my $dbg, ">>", $mat->{debug} if defined $mat->{debug};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
+my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 (my $syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
@@ -164,6 +167,9 @@ for (;;) {
                     print $w "[mtx] $sender: $text\n" if defined $w;
                     close $w if defined $w;
                 }
+
+                # relay to mattermost
+                Hermod::relay2mm("[mtx] $sender: $text\n",$mm->{url}) if defined $mm;
             }
         }
     };

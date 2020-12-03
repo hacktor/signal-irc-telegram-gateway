@@ -15,6 +15,7 @@ use JSON;
 use TOML;
 use Text::Unidecode;
 use DBI;
+use Hermod;
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
@@ -35,6 +36,7 @@ unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id
     exit;
 }
 my $tel = $cfg->{telegram};
+my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 
 # bots cannot get a list of group members, so we keep a database
 my $dbh = DBI->connect("dbi:SQLite:dbname=$tel->{db}", "", "", { RaiseError => 1 }, )
@@ -164,6 +166,7 @@ while (my $cgi = CGI::Fast->new) {
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
             print $wha $text if defined $wha;
+            Hermod::relay2mm($text,$mm) if defined $mm;
             ok("New member(s): $members\n");
         }
         
@@ -175,6 +178,7 @@ while (my $cgi = CGI::Fast->new) {
             print $sig $text if defined $sig;
             print $mat $text if defined $mat;
             print $wha $text if defined $wha;
+            Hermod::relay2mm($text,$mm) if defined $mm;
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
 
@@ -206,14 +210,24 @@ while (my $cgi = CGI::Fast->new) {
         # send to matrix
         print $mat "[tel] $first $last: $ftext\n" if defined $mat;
 
-        # for signal, whatsapp, skip documents, photo's. they've been sent already.
-        print $sig "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $sig;
-        print $wha "[tel] $first $last: $text\n" unless $text =~ /\*\* sends / or not defined $wha;
+        # for signal, whatsapp, mattermost, skip document, photo links, they are uploaded
+        unless ($text =~ /\*\* sends /) {
+            print $sig "[tel] $first $last: $text\n" if defined $sig;
+            print $wha "[tel] $first $last: $text\n" if defined $wha;
+
+            # send to mattermost
+            Hermod::relay2mm("[tel] $first $last: $text\n",$mm) if defined $mm->{url};
+        }
 
         # optionaly print file line
-        print $sig "$fline\n" if defined $sig and $fline;
-        print $mat "$fline\n" if defined $mat and $fline;
-        print $wha "$fline\n" if defined $wha and $fline;
+        if ($fline) {
+            print $sig "$fline\n" if defined $sig;
+            print $mat "$fline\n" if defined $mat;
+            print $wha "$fline\n" if defined $wha;
+
+            # or relay file to mattermost
+            Hermod::relayFile2mm($fline,$mm) if defined $mm;
+        }
     }
     ok();
 }

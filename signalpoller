@@ -16,6 +16,7 @@ use WWW::Curl::Form;
 use URI::Escape;
 use DBI;
 use Capture::Tiny 'tee';
+use Hermod;
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
@@ -37,6 +38,7 @@ open my $dbg, ">>", $sig->{debug} if defined $sig->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 # tailing signal infile and telegram downloads for stuff to send
@@ -189,10 +191,10 @@ for (;;) {
             close $w;
         }
 
-        # relay to Matrix, Whatsapp
+        # relay to Matrix, Whatsapp, Mattermost
         if ($text =~ /\w/) {
 
-            my $msg = "[sig] $anonsender: $text\n";
+            Hermod::relay2mm("[sig] $anonsender: $text\n",$mm) if defined $mm;
             relayToFile("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
         }
 
@@ -229,6 +231,9 @@ for (;;) {
                     print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if defined $dbg;
                 }
             }
+
+            # relay to Mattermost
+            Hermod::relayFile2mm($filemsg,$mm) if defined $mm;
 
             # relay to Matrix, Whatsapp
             relayToFile($filemsg, $_) for $mat->{infile}, $wha->{infile};

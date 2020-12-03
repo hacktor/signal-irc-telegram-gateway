@@ -12,6 +12,7 @@ use URI::Escape;
 use JSON qw( decode_json );
 use TOML;
 use DBI;
+use Hermod;
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
@@ -23,6 +24,7 @@ open my $dbg, ">>", $cfg->{irc}->{debug} if defined $cfg->{irc}->{debug};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
@@ -100,6 +102,7 @@ sub irc_public {
 
     my $text = "[irc] $nick: $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2mm($text,$mm) if defined $mm;
     relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
@@ -134,6 +137,7 @@ sub irc_ctcp_action {
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] ***$nick $what\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2mm($text,$mm) if defined $mm;
     relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
@@ -144,6 +148,7 @@ sub irc_nick {
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[irc] $nick is now known as $who\n";
     relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2mm($text,$mm) if defined $mm;
     relay($_,$text) for $sig->{infile}, $mat->{infile};
 }
 
@@ -156,6 +161,7 @@ sub irc_join {
     my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
+        Hermod::relay2mm($text,$mm) if defined $mm;
         relay($_,$text) for $sig->{infile}, $mat->{infile};
     }
 }
@@ -168,6 +174,7 @@ sub irc_quit {
     my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
         relay2tel($tel->{chat_id},$text) if defined $tel;
+        Hermod::relay2mm($text,$mm) if defined $mm;
         relay($_,$text) for $sig->{infile}, $mat->{infile};
     }
 }
