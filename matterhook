@@ -1,0 +1,77 @@
+#!/usr/bin/perl -w
+use strict;
+use CGI::Fast qw/:standard/;
+use JSON;
+use TOML;
+use Text::Unidecode;
+use URI::Escape;
+
+my $ok = '{"ok":true,"result":true}';
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
+
+# communicate with bot through logfiles
+open my $irc, '>>:utf8', $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
+open my $sig, '>>:utf8', $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
+open my $mat, '>>:utf8', $cfg->{matrix}->{infile} if defined $cfg->{matrix}->{infile};
+open my $wha, '>>:utf8', $cfg->{whatsapp}->{infile} if defined $cfg->{whatsapp}->{infile};
+open my $dbg, '>>:utf8', $cfg->{mattermost}->{debug} if defined $cfg->{mattermost}->{debug};
+
+my $mm = $cfg->{mattermost};
+unless (defined $mm->{intoken} and defined $mm->{channel_id} and defined $mm->{user_id}) {
+    print CGI->header(-type => 'application/json');
+    print '{"ok": false, "status": 500, "error": "token, channel_id or user_id undefined"}'."\n\n";
+    exit;
+}
+
+while (my $cgi = CGI::Fast->new) {
+    my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
+    my $dj = decode_json( $body );
+
+    print $dbg "$body\n" if defined $dbg;
+
+    # check intoken, channel and not from me
+    if ($dj->{token} eq $mm->{intoken} and $dj->{channel_id} eq $mm->{channel_id} and $dj->{user_id} ne $mm->{user_id}) {
+
+        if ($dj->{file_ids}) {
+
+            # TODO download or get public link
+        }
+
+        my @lines = split /\n/, $dj->{text};
+        for my $msg (@lines) {
+            next unless $msg;
+
+            # send to IRC, split lines in chunks of ~maxmsg size if necessary
+            if (defined $irc and length $msg > $cfg->{irc}->{maxmsg}) {
+                $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
+                print $irc "[mm] $dj->{user_name}: $_\n" for split /\n/, $msg;
+            } elsif (defined $irc) {
+                print $irc "[mm] $dj->{user_name}: $msg\n";
+            }
+        }
+
+        # send to telegram
+        if (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
+
+            my $URL = "https://api.telegram.org/bot$cfg->{telegram}->{token}/sendMessage";
+            my $telmsg;
+            eval { $telmsg = uri_escape("[mm] $dj->{user_name}: ".$dj->{text}); };
+            $telmsg = uri_escape_utf8("[mm] $dj->{user_name}: ".$dj->{text}) if $@;
+            qx( curl -s "$URL?chat_id=$cfg->{telegram}->{chat_id}&text=$telmsg" );
+        }
+
+        # send to matrix, signal, whatsapp
+        print $mat "[mm] $dj->{user_name}: $dj->{text}\n" if defined $mat;
+        print $sig "[mm] $dj->{user_name}: $dj->{text}\n" if defined $sig;
+        print $wha "[mm] $dj->{user_name}: $dj->{text}\n" if defined $wha;
+    }
+
+    print $cgi->header(-type => 'application/json');
+    print $ok."\n\n";
+}
+
+
