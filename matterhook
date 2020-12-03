@@ -5,6 +5,7 @@ use JSON;
 use TOML;
 use Text::Unidecode;
 use URI::Escape;
+use Hermod;
 
 my $ok = '{"ok":true,"result":true}';
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
@@ -30,8 +31,6 @@ while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
     my $dj = decode_json( $body );
 
-    print $dbg "$body\n" if defined $dbg;
-
     # check intoken, channel and not from me
     if ($dj->{token} eq $mm->{intoken} and $dj->{channel_id} eq $mm->{channel_id} and $dj->{user_id} ne $mm->{user_id}) {
 
@@ -42,9 +41,9 @@ while (my $cgi = CGI::Fast->new) {
             # send to IRC, split lines in chunks of ~maxmsg size if necessary
             if (defined $irc and length $msg > $cfg->{irc}->{maxmsg}) {
                 $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $irc "[mm] $dj->{user_name}: $_\n" for split /\n/, $msg;
+                Hermod::relayToFile("[mm] $dj->{user_name}: $_\n", $irc->{infile}) for split /\n/, $msg;
             } elsif (defined $irc) {
-                print $irc "[mm] $dj->{user_name}: $msg\n";
+                Hermod::relayToFile("[mm] $dj->{user_name}: $msg\n", $irc->{infile});
             }
         }
 
@@ -52,7 +51,7 @@ while (my $cgi = CGI::Fast->new) {
         Hermod::relay2tel($cfg->{telegram},"[mm] $dj->{user_name}: ".$dj->{text}) if defined $cfg->{telegram};
 
         # send to matrix, signal, whatsapp
-        Hermod::relayToFile($text, $_) for $mat->{infile}, $sig->{infile}, $wha->{infile};
+        Hermod::relayToFile("[mm] $dj->{user_name}: $dj->{text}\n", $_) for $mat->{infile}, $sig->{infile}, $wha->{infile};
 
         if ($dj->{file_ids}) {
 
@@ -60,12 +59,12 @@ while (my $cgi = CGI::Fast->new) {
             my $filemsg;
             for my $id (split /,/,$dj->{file_ids}) {
 
-                if (my $link = getmmlink($id,$mm)) {
+                if (my $link = Hermod::getmmlink($id,$mm)) {
 
                     # Relay links to other chats
                     Hermod::relay2tel($cfg->{telegram},"[mm] **$dj->{user_name} sends a file: $link\n");
                     Hermod::relayToFile("[mm] **$dj->{user_name} sends a file: $link\n", $_)
-                        for $mat->{infile}, $sig->{infile}, $wha->{infile};
+                        for $mat->{infile}, $sig->{infile}, $wha->{infile}, $irc->{infile};
                 }
             }
         }

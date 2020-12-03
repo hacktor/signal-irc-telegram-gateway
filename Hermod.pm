@@ -10,10 +10,10 @@ sub getmmlink {
 
     my ($id,$mm) = @_;
     my $json = JSON->new->allow_nonref;
-    my $out = qx( curl -s -XGET -H "$bearer" $mm->{channel_id}" "$mm->{api}/files/$id/link" );
+    my $out = qx( curl -s -XGET -H "Authorization: Bearer $mm->{bearer}" "$mm->{channel_id}" "$mm->{api}/files/$id/link" );
     my $jsonret;
     eval { $jsonret = $json->decode($out); };
-    return $jsonret->{link} if defined $jsonret->{link};
+    return (defined $jsonret->{link}) ? $jsonret->{link} : '';
 }
 
 sub relay2mm {
