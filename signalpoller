@@ -138,7 +138,7 @@ for (;;) {
                 $text = "[sig] $text";
 
                 # notify chats
-                relayToFile($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
+                Hermod::relayToFile($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
 
                 if (defined $tel->{token} and defined $tel->{chat_id}) {
 
@@ -155,7 +155,7 @@ for (;;) {
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            relayToFile("CMD!SIG!users\n", $irc->{infile});
+            Hermod::relayToFile("CMD!SIG!users\n", $irc->{infile});
             next;
         }
 
@@ -195,61 +195,31 @@ for (;;) {
         if ($text =~ /\w/) {
 
             Hermod::relay2mm("[sig] $anonsender: $text\n",$mm) if defined $mm;
-            relayToFile("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
+            Hermod::relayToFile("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
         }
 
         # relay optional attachments
         foreach my $att (@$attach) {
             (my $ext = $att->{contentType}) =~ s#.*/##;
-            my ($msg, $URL, $type);
             rename "$sig->{attachments}/$att->{id}", "$sig->{attachments}/$att->{id}.$ext";
-            if ($att->{contentType} =~ /image/) {
-                $URL = "https://api.telegram.org/bot$tel->{token}/sendPhoto";
-                $type = 'photo';
-                $msg = "[sig] **$anonsender sends an image: $sig->{url}/$att->{id}.$ext\n";
-            } else {
-                $URL = "https://api.telegram.org/bot$tel->{token}/sendDocument";
-                $type = 'document';
-                $msg = "[sig] **$anonsender sends a document: $sig->{url}/$att->{id}.$ext\n";
-            }
+            my $type = ($att->{contentType} =~ /image/) ? 'photo' : 'document';
 
-            my $filemsg = "FILE!$sig->{url}/$att->{id}.$ext!$att->{contentType}!$sig->{attachments}/$att->{id}.$ext [sig] $anonsender\n";
+            my $filemsg = "FILE!$sig->{url}/$att->{id}.$ext!$att->{contentType}!$sig->{attachments}/$att->{id}.$ext [sig] $type by $anonsender\n";
+            my $msg = "[sig] **$anonsender sends a $type: $sig->{url}/$att->{id}.$ext\n";
 
             # relay to telegram
-            if (defined $tel->{chat_id}) {
-
-                my $curl = WWW::Curl::Easy->new;
-                $curl->setopt(CURLOPT_URL, $URL);
-                my $curlf = WWW::Curl::Form->new;
-                $curlf->formaddfile("$sig->{attachments}/$att->{id}.$ext", $type, "multipart/form-data");
-                $curlf->formadd("chat_id", "$tel->{chat_id}");
-                $curlf->formadd("caption", "[sig] $type sent by $anonsender");
-                $curl->setopt(CURLOPT_HTTPPOST, $curlf);
-                my $retcode = $curl->perform;
-                if ($retcode != 0) {
-                    print "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
-                    print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if defined $dbg;
-                }
-            }
+            Hermod::relayFile2tel($filemsg,$tel,$type) if defined $tel;
 
             # relay to Mattermost
             Hermod::relayFile2mm($filemsg,$mm) if defined $mm;
 
             # relay to Matrix, Whatsapp
-            relayToFile($filemsg, $_) for $mat->{infile}, $wha->{infile};
+            Hermod::relayToFile($filemsg, $_) for $mat->{infile}, $wha->{infile};
 
             # relay to irc, matrix
-            relayToFile($msg, $_) for $irc->{infile}, $mat->{infile};
+            Hermod::relayToFile($msg, $_) for $irc->{infile}, $mat->{infile};
         }
     }
-}
-
-sub relayToFile {
-    my ($msg, $infile) = @_;
-    return unless $infile and $msg;
-    open my $w, ">>", $infile;
-    print $w $msg if defined $w;
-    close $w;
 }
 
 sub getalias {
