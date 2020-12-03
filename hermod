@@ -101,9 +101,9 @@ sub irc_public {
     }
 
     my $text = "[irc] $nick: $what\n";
-    relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2tel($tel,$text) if defined $tel;
     Hermod::relay2mm($text,$mm) if defined $mm;
-    relay($_,$text) for $sig->{infile}, $mat->{infile};
+    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_msg {
@@ -136,9 +136,9 @@ sub irc_ctcp_action {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] ***$nick $what\n";
-    relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2tel($tel,$text) if defined $tel;
     Hermod::relay2mm($text,$mm) if defined $mm;
-    relay($_,$text) for $sig->{infile}, $mat->{infile};
+    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_nick {
@@ -147,9 +147,9 @@ sub irc_nick {
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[irc] $nick is now known as $who\n";
-    relay2tel($tel->{chat_id},$text) if defined $tel;
+    Hermod::relay2tel($tel,$text) if defined $tel;
     Hermod::relay2mm($text,$mm) if defined $mm;
-    relay($_,$text) for $sig->{infile}, $mat->{infile};
+    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
 }
 
 sub irc_join {
@@ -160,9 +160,9 @@ sub irc_join {
     return if $nick eq $cfg->{irc}->{nick};
     my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
-        relay2tel($tel->{chat_id},$text) if defined $tel;
+        Hermod::relay2tel($tel,$text) if defined $tel;
         Hermod::relay2mm($text,$mm) if defined $mm;
-        relay($_,$text) for $sig->{infile}, $mat->{infile};
+        Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
     }
 }
 
@@ -173,9 +173,9 @@ sub irc_quit {
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
-        relay2tel($tel->{chat_id},$text) if defined $tel;
+        Hermod::relay2tel($tel,$text) if defined $tel;
         Hermod::relay2mm($text,$mm) if defined $mm;
-        relay($_,$text) for $sig->{infile}, $mat->{infile};
+        Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
     }
 }
 
@@ -190,12 +190,12 @@ sub irc_353 {
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
 
         $text .= "Signal users: " . signalusers() . "\n" if defined $sig->{db};
-        relay2tel($tel->{chat_id},$text) if defined $tel;
+        Hermod::relay2tel($tel,$text) if defined $tel;
 
     } elsif (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'SIG') {
 
         $text .= "Telegram users: " . teleusers() . "\n" if defined $tel->{db};
-        relay($sig->{infile},$text) if defined $sig;
+        Hermod::relayToFile($text,$sig->{infile}) if defined $sig;
     }
 }
 
@@ -268,28 +268,6 @@ sub _default {
         qx( $cfg->{common}->{notify} "Hermod died on $hostname\n" ) if defined $cfg->{common}->{notify};
         die "I got disconnected :( :(\nKilling myself..\n";
     }
-}
-
-sub relay2tel {
-    my ($chat_id,$text) = @_;
-    print $text;
-    print $dbg $text if defined $dbg;
-
-    # we relay straight to telegram
-    my $telmsg;
-    eval { $telmsg = uri_escape($text); };
-    $telmsg = uri_escape_utf8($text) if $@;
-    qx( curl -s "$URL?chat_id=$chat_id&text=$telmsg" );
-}
-
-sub relay {
-    my ($file,$text) = @_;
-    return unless $file and $text;
-
-    # write to some file
-    open my $w, ">>", $file;
-    print $w $text;
-    close $w;
 }
 
 sub teleusers {
