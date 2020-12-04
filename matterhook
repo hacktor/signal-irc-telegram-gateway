@@ -26,9 +26,11 @@ unless (defined $mm->{intoken} and defined $mm->{channel_id} and defined $mm->{u
     print '{"ok": false, "status": 500, "error": "token, channel_id or user_id undefined"}'."\n\n";
     exit;
 }
+open my $dbg, ">>", $mm->{debug} if defined $mm->{debug};
 
 while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
+    print $dbg $body if defined $dbg;
     my $dj = decode_json( $body );
 
     # check intoken, channel and not from me
