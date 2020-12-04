@@ -211,7 +211,7 @@ while (my $cgi = CGI::Fast->new) {
         print $mat "[tel] $first $last: $ftext\n" if defined $mat;
 
         # for signal, whatsapp, mattermost, skip document, photo links, they are uploaded
-        unless ($text =~ /\*\* sends /) {
+        if ($text and $text !~ /\*\* sends /) {
             print $sig "[tel] $first $last: $text\n" if defined $sig;
             print $wha "[tel] $first $last: $text\n" if defined $wha;
 
