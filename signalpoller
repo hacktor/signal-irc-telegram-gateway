@@ -160,7 +160,7 @@ for (;;) {
 
             $text = "[sig] $anonsender: $text\n";
             Hermod::relay2tel($tel,$text) if defined $tel;
-            Hermod::relay2irc($text,$irc) if defined $irc;
+            Hermod::relay2irc($text,$irc,"[sig] $anonsender: ") if defined $irc;
             Hermod::relay2mm($text,$mm) if defined $mm;
             Hermod::relayToFile($text, $_) for $mat->{infile}, $wha->{infile};
         }

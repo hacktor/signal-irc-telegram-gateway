@@ -120,7 +120,7 @@ sub relayFile2tel {
 
 sub relay2irc {
 
-    my ($text, $irc) = @_;
+    my ($text, $irc, $pre) = @_;
     return unless $irc->{infile} and $text;
 
     my @lines = split /\n/, $text;
@@ -132,9 +132,9 @@ sub relay2irc {
         # send to IRC, split lines in chunks of ~maxmsg size if necessary
         if (length $msg > $irc->{maxmsg}) {
             $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-            print $w "$_\n" for split /\n/, $msg;
+            print $w "$pre$_\n" for split /\n/, $msg;
         } else {
-            print $w "$msg\n";
+            print $w "$pre$msg\n";
         }
     }
     close $w;

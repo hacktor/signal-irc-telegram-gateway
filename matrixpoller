@@ -135,7 +135,7 @@ for (;;) {
                 Hermod::relay2tel($tel,$text) if defined $tel;
 
                 # relay to IRC
-                Hermod::relay2irc($text, $irc->{infile}) if defined $irc;
+                Hermod::relay2irc($text, $irc, "[mtx] $sender: ") if defined $irc;
 
                 # relay ro signal and whatsapp
                 Hermod::relayToFile($text, $_) for $sig->{infile}, $wha->{infile};
