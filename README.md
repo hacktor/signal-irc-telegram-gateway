@@ -4,6 +4,9 @@
 often considered the messenger of the gods
 
 These scripts act as a gateway between a telegram group a signal group and an irc channel.
+
+There are options to add gateways to a matrix room and/or a mattermost channel.
+
 The first thing to do is to register a telegram bot with the **botfather**.
 Then you can add the bot to the admins of the telegram channel you want to share with IRC. 
 Note the telegram API token and find the telegram group chat\_id.
@@ -27,18 +30,41 @@ Refer to the [Telegram Bot API](https://core.telegram.org/bots/api) for details 
 
 The IRC bot and the webhook write to **signal-\>infile**. The poller will read it and send new content to the signal group
 
-## Setting up the hook
+## Setting up the hooks
 
-The gateway consists of three parts: two daemon parts and a webhook. Place the
-webhook in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
+The gateway consists of daemon parts and webhooks. Place the
+webhook for telegram in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
 
-Next thing is to register the webhook:
+Next thing is to register the webhooks:
+
+### Telegram
 
 ```bash
 curl -F "url=https://webserver/cgi-bin/telegramhook" https://api.telegram.org/bot$TOKEN/setWebhook
 ```
 
 Make sure the telegram bot you are using has privacy mode disabled. If not, the bot won't see any group messages by other users. You can review the **telegram-\>debug** file to get the chat\_id of the telegram group.
+
+### Mattermost
+
+The bridge to mattermost works with the Incoming and Outgoing webhooks that you can register in the mattermost interface.
+
+For interacting with the API you should also login and get the bearer token.
+
+```bash
+curl -i -d '{"login_id":"gateway","password":"###########"}' https://mattermost.example.com/api/v4/users/login
+HTTP/2 200 
+server: nginx
+date: Wed, 02 Dec 2020 18:50:49 GMT
+content-type: application/json
+content-length: 673
+token: 767676zz76zz76z76z76z76z
+vary: Accept-Encoding
+x-ratelimit-limit: 101
+....
+
+```
+Set the *bearer* variable in the mattermost section of the toml configuration file
 
 ## Setting up Signal
 
