@@ -23,19 +23,16 @@ unless ($cfg) {
     die "Error parsing toml: $e";
 }
 
-# communicate with bot through logfiles
-open my $irc, '>>:utf8', $cfg->{irc}->{infile} if defined $cfg->{irc}->{infile};
-open my $sig, '>>:utf8', $cfg->{signal}->{infile} if defined $cfg->{signal}->{infile};
-open my $mat, '>>:utf8', $cfg->{matrix}->{infile} if defined $cfg->{matrix}->{infile};
-open my $wha, '>>:utf8', $cfg->{whatsapp}->{infile} if defined $cfg->{whatsapp}->{infile};
-open my $dbg, '>>:utf8', $cfg->{telegram}->{debug} if defined $cfg->{telegram}->{debug};
-
 unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id}) {
     print CGI->header(-type => 'application/json');
     print '{"ok": false, "status": 500, "error": "token or chat_id undefined"}'."\n\n";
     exit;
 }
 my $tel = $cfg->{telegram};
+my $irc = $cfg->{irc} if defined $cfg->{irc};
+my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+my $sig = $cfg->{signal} if defined $cfg->{signal};
+my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 
 # bots cannot get a list of group members, so we keep a database
@@ -147,7 +144,6 @@ while (my $cgi = CGI::Fast->new) {
             if ($ircfline) {
                 $ircfline =~ s/\*\* sends //;
             }
-            #ok("forwarded msg: $msg->{text} from $title\n");
         }
 
         # is the message a channel post?
@@ -162,10 +158,9 @@ while (my $cgi = CGI::Fast->new) {
                 $members .= " $m->{last_name}" if $m->{last_name};
             }
             $text = "[tel] $members joined the chat\n";
-            print $irc $text if defined $irc;
-            print $sig $text if defined $sig;
-            print $mat $text if defined $mat;
-            print $wha $text if defined $wha;
+
+            # relay to all chats
+            Hermod::relayToFile($text, $_) for $irc->{infile},$sig->{infile},$mat->{infile},$wha->{infile};
             Hermod::relay2mm($text,$mm) if defined $mm;
             ok("New member(s): $members\n");
         }
@@ -174,11 +169,11 @@ while (my $cgi = CGI::Fast->new) {
         if (defined $msg->{left_chat_member}->{id}) {
             $st_del->execute($msg->{left_chat_member}->{id}) if defined $st_del;
             $text = "[tel] $msg->{left_chat_member}->{first_name} left the chat\n";
-            print $irc $text if defined $irc;
-            print $sig $text if defined $sig;
-            print $mat $text if defined $mat;
-            print $wha $text if defined $wha;
+
+            # relay to all chats
+            Hermod::relayToFile($text, $_) for $irc->{infile},$sig->{infile},$mat->{infile},$wha->{infile};
             Hermod::relay2mm($text,$mm) if defined $mm;
+
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
 
@@ -186,44 +181,36 @@ while (my $cgi = CGI::Fast->new) {
         if ($text =~ /!users/) {
 
             # user list asked; relay command to hermod
-            print $irc "CMD!TEL!users\n" if defined $irc;
+            Hermod::relayToFile("CMD!TEL!users\n",$irc->{infile}) if defined $irc->{infile};
 
             ok("!users command relayed for $first $last\n");
         }
 
-        # split lines and write to log for irc, matrix, optional prepend forwarded file
+        # optional append file link url
         my $ftext = ($ircfline) ? "$text\n$ircfline" : $text;
-        my @lines = split /\n/, $ftext;
-        for my $msg (@lines) {
-            next unless $msg;
+        my $pre = "[tel] $first $last: ";
 
-            # send to IRC, split lines in chunks of ~maxmsg size if necessary
-            if (defined $irc and length $msg > $cfg->{irc}->{maxmsg}) {
-                $msg =~ s/(.{1,$cfg->{irc}->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                print $irc "[tel] $first $last: $_\n" for split /\n/, $msg;
-            } elsif (defined $irc) {
-                print $irc "[tel] $first $last: $msg\n";
-            }
-
-        }
+        # send to irc
+        Hermod::relay2irc("$pre$ftext\n",$irc,$pre) if defined $irc;
 
         # send to matrix
-        print $mat "[tel] $first $last: $ftext\n" if defined $mat;
+        Hermod::relayToFile("$pre$ftext\n", $mat->{infile});
 
         # for signal, whatsapp, mattermost, skip document, photo links, they are uploaded
         if ($text and $text !~ /\*\* sends /) {
-            print $sig "[tel] $first $last: $text\n" if defined $sig;
-            print $wha "[tel] $first $last: $text\n" if defined $wha;
+
+            # relay to signal, whatsapp
+            Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile}
 
             # send to mattermost
-            Hermod::relay2mm("[tel] $first $last: $text\n",$mm) if defined $mm->{url};
+            Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
         }
 
         # optionaly print file line
         if ($fline) {
-            print $sig "$fline\n" if defined $sig;
-            print $mat "$fline\n" if defined $mat;
-            print $wha "$fline\n" if defined $wha;
+
+            # relay file to signal, mattermost and whatsapp
+            Hermod::relayToFile("$fline\n", $_) for $sig->{infile}, $mat->{infile}, $wha->{infile};
 
             # or relay file to mattermost
             Hermod::relayFile2mm($fline,$mm) if defined $mm;
