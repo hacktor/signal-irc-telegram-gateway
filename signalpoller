@@ -139,16 +139,8 @@ for (;;) {
 
                 # notify chats
                 Hermod::relayToFile($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
-
-                if (defined $tel->{token} and defined $tel->{chat_id}) {
-
-                    # notify the telegram group
-                    my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-                    my $telmsg;
-                    eval { $telmsg = uri_escape($text); };
-                    $telmsg = uri_escape_utf8($text) if $@;
-                    qx( curl -s "$URL$telmsg" );
-                }
+                Hermod::relay2mm($text,$mm) if defined $mm;
+                Hermod::relay2tel($tel,$text) if defined $tel;
 
                 next;
             }
@@ -163,39 +155,14 @@ for (;;) {
         next unless $group eq $sig->{gid};
         next unless $text or $attach;
 
-        if (defined $tel->{token} and defined $tel->{chat_id} and $text =~ /\w/) {
-
-            # relay to telegram
-            my $telmsg;
-            my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=";
-            eval { $telmsg = uri_escape("[sig] $anonsender: $text"); };
-            $telmsg = uri_escape_utf8("[sig] $anonsender: $text") if $@;
-            qx( curl -s "$URL$telmsg" );
-        }
-
-        # relay to IRC
-        if (defined $irc->{infile} and $text =~ /\w/) {
-            my @lines = split /\n/, $text;
-            open my $w, ">>", $irc->{infile};
-            for my $msg (@lines) {
-                next unless $msg and defined $w;
-    
-                # send to IRC, split lines in chunks of ~maxmsg size if necessary
-                if (length $msg > $irc->{maxmsg}) {
-                    $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-                    print $w "[sig] $anonsender: $_\n" for split /\n/, $msg;
-                } else {
-                    print $w "[sig] $anonsender: $msg\n";
-                }
-            }
-            close $w;
-        }
-
-        # relay to Matrix, Whatsapp, Mattermost
+        # relay to all chats
         if ($text =~ /\w/) {
 
-            Hermod::relay2mm("[sig] $anonsender: $text\n",$mm) if defined $mm;
-            Hermod::relayToFile("[sig] $anonsender: $text\n", $_) for $mat->{infile}, $wha->{infile};
+            $text = "[sig] $anonsender: $text\n";
+            Hermod::relay2tel($tel,$text) if defined $tel;
+            Hermod::relay2irc($text,$irc) if defined $irc;
+            Hermod::relay2mm($text,$mm) if defined $mm;
+            Hermod::relayToFile($text, $_) for $mat->{infile}, $wha->{infile};
         }
 
         # relay optional attachments
