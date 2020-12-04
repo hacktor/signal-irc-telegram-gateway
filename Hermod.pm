@@ -118,7 +118,30 @@ sub relayFile2tel {
     }
 }
 
+sub relay2irc {
+
+    my ($text, $irc) = @_;
+    return unless $irc->{infile} and $text;
+
+    my @lines = split /\n/, $text;
+    open my $w, ">>", $irc->{infile} or return;
+    for my $msg (@lines) {
+
+        next unless $msg;
+
+        # send to IRC, split lines in chunks of ~maxmsg size if necessary
+        if (length $msg > $irc->{maxmsg}) {
+            $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
+            print $w "[mtx] $sender: $_\n" for split /\n/, $msg;
+        } else {
+            print $w "[mtx] $sender: $msg\n";
+        }
+    }
+    close $w;
+}
+
 sub relayToFile {
+
     my ($line, $infile) = @_;
     return unless $infile and $line;
     open my $w, ">>:utf8", $infile;
