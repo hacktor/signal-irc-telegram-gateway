@@ -5,12 +5,17 @@ use TOML;
 use WWW::Curl::Easy;
 use WWW::Curl::Form;
 use URI::Escape;
+use Capture::Tiny 'capture';
 
 sub getmmlink {
 
-    my ($id,$mm) = @_;
+    my ($id,$mm,$dbg) = @_;
     my $json = JSON->new->allow_nonref;
-    my $out = qx( curl -s -XGET -H "Authorization: Bearer $mm->{bearer}" "$mm->{channel_id}" "$mm->{api}/files/$id/link" );
+    my ($out, $err, $ret) = capture {
+        system("curl", "-s", "-XGET", "-H", "Authorization: Bearer $mm->{bearer}", "$mm->{api}/files/$id/link");
+    };
+    print $dbg $out, $err if defined $dbg;
+
     my $jsonret;
     eval { $jsonret = $json->decode($out); };
     return (defined $jsonret->{link}) ? $jsonret->{link} : '';
@@ -32,10 +37,8 @@ sub relay2mm {
     $curl->setopt(WWW::Curl::Easy::CURLOPT_POST(), 1);
     $curl->setopt(WWW::Curl::Easy::CURLOPT_POSTFIELDS, $text);
     my $retcode = $curl->perform;
-    if (defined $mm->{debug} and $retcode != 0) {
-        open $dbg, ">>", $mm->{debug};
-        print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if $mm->{debug};
-        close $dbg;
+    if ($retcode != 0) {
+        print $dbg "An error happened: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n" if $dbg;
     }
 }
 
@@ -51,9 +54,15 @@ sub relayFile2mm {
         my $json = JSON->new->allow_nonref;
         my $bearer = "Authorization: Bearer $mm->{bearer}";
 
-        my $out = qx( curl -s -XPOST -H "$bearer" -F "channel_id=$mm->{channel_id}" -F "files=\@$file" "$mm->{api}/files" );
+        my ($out, $err, $ret) = capture {
+            system("curl", "-s", "-XPOST", "-H", "$bearer", "-F", "channel_id=$mm->{channel_id}", "-F", "files=\@$file", "$mm->{api}/files" );
+        };
+        print $dbg $out, $err if defined $dbg;
+
         my $jsonret;
         eval { $jsonret = $json->decode($out); };
+        print $dbg $@ if defined $dbg and $@;
+
         if (defined $jsonret->{file_infos} and ref $jsonret->{file_infos} eq "ARRAY") {
 
             my $jh = {
@@ -102,7 +111,9 @@ sub relay2mtx {
 
     chomp $line;
     $line =~ s/"/\\"/g;
+    $line =~ s/\n/\\n/g;
     my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
+    print $dbg "body: $body\n" if defined $dbg;
     my ($out, $err, $ret) = capture {
         system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
     };
@@ -117,13 +128,16 @@ sub relay2tel {
     my $telmsg;
     eval { $telmsg = uri_escape($text); };
     $telmsg = uri_escape_utf8($text) if $@;
-    qx( curl -s "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=$telmsg" );
+    my ($out, $err, $ret) = capture {
+        system("curl", "-s", "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=$telmsg");
+    };
+    print $dbg $out, $err if defined $dbg;
 }
 
 sub relayFile2tel {
 
     my ($line,$tel,$type,$dbg) = @_;
-    if ($line =~ /^FILE!/) {
+    if ($line =~ /^FILE!/ and $tel->{token} and $tel->{chat_id} and $type) {
 
         $line = substr $line,5;
         my ($fileinfo,$caption) = split / /, $line, 2;
@@ -152,7 +166,7 @@ sub relay2irc {
     return unless $irc->{infile} and $text;
 
     my @lines = split /\n/, $text;
-    open my $w, ">>", $irc->{infile} or return;
+    open my $w, ">>:utf8", $irc->{infile} or return;
     for my $msg (@lines) {
 
         next unless $msg;
@@ -160,9 +174,11 @@ sub relay2irc {
         # send to IRC, split lines in chunks of ~maxmsg size if necessary
         if (length $msg > $irc->{maxmsg}) {
             $msg =~ s/(.{1,$irc->{maxmsg}}\S|\S+)\s+/$1\n/g;
-            print $w "$pre$_\n" for split /\n/, $msg;
+            eval { print $w "$pre$_\n" for split /\n/, $msg; };
+            print $dbg $@ if $@ and defined $dbg;
         } else {
-            print $w "$pre$msg\n";
+            eval { print $w "$pre$msg\n"; };
+            print $dbg $@ if $@ and defined $dbg;
         }
     }
     close $w;
