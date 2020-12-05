@@ -35,7 +35,6 @@ my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
-my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 (my $syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
 $syncurl =~ s/__TOKEN__/$mat->{token}/;
@@ -100,8 +99,8 @@ for (;;) {
                 # relay to IRC
                 Hermod::relay2irc("$text\n", $irc, $pre) if defined $irc;
 
-                # relay ro signal and whatsapp
-                Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile};
+                # relay ro signal
+                Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile};
 
                 # relay to mattermost
                 Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;

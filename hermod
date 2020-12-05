@@ -94,9 +94,6 @@ sub irc_public {
         }
         return;
 
-    } elsif ($what =~ /^!whatsapp/i) {
-
-        return;
     }
 
     my $text = "[irc] $nick: $what\n";

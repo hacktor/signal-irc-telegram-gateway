@@ -183,7 +183,7 @@ for (;;) {
             # relay to matrix
             Hermod::relay2mtx($msg,$mat,$dbg) if defined $mat;
 
-            # relay to irc, whatsapp
+            # relay to irc
             Hermod::relayToFile($msg, $_, $dbg) for $irc->{infile};
         }
     }
