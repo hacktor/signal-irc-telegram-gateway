@@ -25,7 +25,6 @@ my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
-my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
 
@@ -101,9 +100,10 @@ sub irc_public {
     }
 
     my $text = "[irc] $nick: $what\n";
-    Hermod::relay2tel($tel,$text) if defined $tel;
-    Hermod::relay2mm($text,$mm) if defined $mm;
-    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
+    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
+    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
 sub irc_msg {
@@ -136,9 +136,10 @@ sub irc_ctcp_action {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] ***$nick $what\n";
-    Hermod::relay2tel($tel,$text) if defined $tel;
-    Hermod::relay2mm($text,$mm) if defined $mm;
-    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
+    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
+    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
 sub irc_nick {
@@ -147,9 +148,10 @@ sub irc_nick {
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
     my $text = "[irc] $nick is now known as $who\n";
-    Hermod::relay2tel($tel,$text) if defined $tel;
-    Hermod::relay2mm($text,$mm) if defined $mm;
-    Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
+    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
+    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
 sub irc_join {
@@ -160,9 +162,10 @@ sub irc_join {
     return if $nick eq $cfg->{irc}->{nick};
     my $text = "[irc] $nick joined the chat\n";
     if (defined $cfg->{irc}->{showjoin}) {
-        Hermod::relay2tel($tel,$text) if defined $tel;
-        Hermod::relay2mm($text,$mm) if defined $mm;
-        Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
+        Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
+        Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+        Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+        Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
     }
 }
 
@@ -173,9 +176,10 @@ sub irc_quit {
     my $nick = ( split /!/, $who )[0];
     my $text = "[irc] $nick quit the chat ($msg)\n";
     if (defined $cfg->{irc}->{showquit}) {
-        Hermod::relay2tel($tel,$text) if defined $tel;
-        Hermod::relay2mm($text,$mm) if defined $mm;
-        Hermod::relayToFile($text,$_) for $sig->{infile}, $mat->{infile};
+        Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
+        Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+        Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+        Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
     }
 }
 

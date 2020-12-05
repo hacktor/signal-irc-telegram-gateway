@@ -4,8 +4,7 @@
 #
 # curl -F "url=https://webserver/cgi-bin/telehook" https://api.telegram.org/bot$TOKEN/setWebhook
 #
-# messages are filtered a little and then written
-# to a logfile, for processing by the bot
+# messages are filtered a little and then relayed to other channels
 #
 # 2019, Ruben de Groot
 
@@ -29,12 +28,11 @@ unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id
     exit;
 }
 my $tel = $cfg->{telegram};
-open my $dbg, ">>", $tel->{debug} if defined $tel->{debug};
+open my $dbg, ">>:utf8", $tel->{debug} if defined $tel->{debug};
 
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
-my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 
 # bots cannot get a list of group members, so we keep a database
@@ -162,8 +160,9 @@ while (my $cgi = CGI::Fast->new) {
             $text = "[tel] $members joined the chat\n";
 
             # relay to all chats
-            Hermod::relayToFile($text, $_) for $irc->{infile},$sig->{infile},$mat->{infile},$wha->{infile};
-            Hermod::relay2mm($text,$mm) if defined $mm;
+            Hermod::relayToFile($text,$_,$dbg) for $irc->{infile}, $sig->{infile};
+            Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+            Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
             ok("New member(s): $members\n");
         }
         
@@ -173,8 +172,9 @@ while (my $cgi = CGI::Fast->new) {
             $text = "[tel] $msg->{left_chat_member}->{first_name} left the chat\n";
 
             # relay to all chats
-            Hermod::relayToFile($text, $_) for $irc->{infile},$sig->{infile},$mat->{infile},$wha->{infile};
-            Hermod::relay2mm($text,$mm) if defined $mm;
+            Hermod::relayToFile($text,$_,$dbg) for $irc->{infile}, $sig->{infile};
+            Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+            Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
 
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
@@ -183,38 +183,38 @@ while (my $cgi = CGI::Fast->new) {
         if ($text =~ /!users/) {
 
             # user list asked; relay command to hermod
-            Hermod::relayToFile("CMD!TEL!users\n",$irc->{infile}) if defined $irc->{infile};
+            Hermod::relayToFile("CMD!TEL!users\n",$_,$dbg) for $irc->{infile};
 
             ok("!users command relayed for $first $last\n");
         }
 
         # optional append file link url
-        my $ftext = ($ircfline) ? "$text\n$ircfline" : $text;
+        my $ftext = ($ircfline) ? "$text $ircfline" : $text;
         my $pre = "[tel] $first $last: ";
 
         # send to irc
-        Hermod::relay2irc("$ftext\n",$irc,$pre) if defined $irc;
+        Hermod::relay2irc("$ftext\n",$irc,$pre,$dbg) if defined $irc;
 
         # send to matrix
-        Hermod::relayToFile("$pre$ftext\n", $mat->{infile});
+        Hermod::relay2mtx("$pre$ftext\n",$mat,$dbg) if defined $mat;
 
-        # for signal, whatsapp, mattermost, skip document, photo links, they are uploaded
+        # for signal, mattermost, we skip document, photo links as they are uploaded
         if ($text and $text !~ /\*\* sends /) {
 
-            # relay to signal, whatsapp
-            Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile};
+            # relay to signal
+            Hermod::relayToFile("$pre$text\n",$_,$dbg) for $sig->{infile};
 
             # send to mattermost
-            Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
+            Hermod::relay2mm("$pre$text\n",$mm,$dbg) if defined $mm;
         }
 
-        # optionaly print file line
+        # print file line to signal, mattermost
         if ($fline) {
 
-            # relay file to signal, mattermost and whatsapp
-            Hermod::relayToFile("$fline\n", $_) for $sig->{infile}, $mat->{infile}, $wha->{infile};
+            # relay file to signal
+            Hermod::relayToFile("$fline\n", $_) for $sig->{infile};
 
-            # or relay file to mattermost
+            # relay file to mattermost
             Hermod::relayFile2mm($fline,$mm) if defined $mm;
         }
     }

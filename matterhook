@@ -7,7 +7,6 @@ use Text::Unidecode;
 use URI::Escape;
 use Hermod;
 
-my $ok = '{"ok":true,"result":true}';
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
 unless ($cfg) {
@@ -18,7 +17,6 @@ my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
-my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 my $mm = $cfg->{mattermost};
 unless (defined $mm->{intoken} and defined $mm->{channel_id} and defined $mm->{user_id}) {
@@ -29,13 +27,16 @@ unless (defined $mm->{intoken} and defined $mm->{channel_id} and defined $mm->{u
 open my $dbg, ">>", $mm->{debug} if defined $mm->{debug};
 
 while (my $cgi = CGI::Fast->new) {
-    my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
+
+    my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '';
+    unless ($body) { nok("missing body"); next; }
+
     print $dbg $body if defined $dbg;
     my $dj;
     eval {
         $dj = decode_json( $body );
     };
-    next if $@;
+    if ($@) { nok($@); next; }
 
     # check intoken, channel and not from me
     if ($dj->{token} eq $mm->{intoken} and $dj->{channel_id} eq $mm->{channel_id} and $dj->{user_id} ne $mm->{user_id}) {
@@ -43,14 +44,11 @@ while (my $cgi = CGI::Fast->new) {
         my $text = "$dj->{text}\n";
         my $pre = "[mm] $dj->{user_name}: ";
 
-        # send to irc
-        Hermod::relay2irc($text,$irc,$pre) if defined $irc;
-
-        # send to telegram
-        Hermod::relay2tel($cfg->{telegram},"$pre$text") if defined $cfg->{telegram};
-
-        # send to matrix, signal, whatsapp
-        Hermod::relayToFile("$pre$text", $_) for $mat->{infile}, $sig->{infile}, $wha->{infile};
+        # send to other chats
+        Hermod::relay2irc($text,$irc,$pre,$dbg) if defined $irc;
+        Hermod::relay2tel($tel,"$pre$text",$dbg) if defined $tel;
+        Hermod::relay2mtx("$pre$text", $mat) if defined $mat;
+        Hermod::relayToFile("$pre$text", $_) for $sig->{infile};
 
         if ($dj->{file_ids}) {
 
@@ -60,16 +58,27 @@ while (my $cgi = CGI::Fast->new) {
 
                 if (my $link = Hermod::getmmlink($id,$mm)) {
 
+                    $pre = "[mm] **$dj->{user_name} sends a file: ";
+
                     # Relay links to other chats
-                    Hermod::relay2tel($cfg->{telegram},"[mm] **$dj->{user_name} sends a file: $link\n");
-                    Hermod::relayToFile("[mm] **$dj->{user_name} sends a file: $link\n", $_)
-                        for $mat->{infile}, $sig->{infile}, $wha->{infile}, $irc->{infile};
+                    Hermod::relay2tel($tel,"$pre$link\n",$dbg) if defined $tel;
+                    Hermod::relay2mtx("$pre$link\n",$mat,$dbg) if defined $mat;
+                    Hermod::relayToFile("$pre$link\n", $_,$dbg) for $sig->{infile}, $irc->{infile};
                 }
             }
         }
     }
+    ok();
+}
 
-    print $cgi->header(-type => 'application/json');
-    print $ok."\n\n";
+sub ok {
+    print CGI->header(-type => 'application/json');
+    print '{"ok":true,"status":200}'."\n\n";
+}
+
+sub nok {
+    my $result = shift;
+    print CGI->header(-type => 'application/json');
+    print '{"ok":false,"status":502,"error":"'.$result.'}'."\n\n";
 }
 

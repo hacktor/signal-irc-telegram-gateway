@@ -39,7 +39,6 @@ my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
-my $wha = $cfg->{whatsapp} if defined $cfg->{whatsapp};
 
 # tailing signal infile and telegram downloads for stuff to send
 open my $tail, "<", $sig->{infile} or die @_;
@@ -138,7 +137,8 @@ for (;;) {
                 $text = "[sig] $text";
 
                 # notify chats
-                Hermod::relayToFile($text, $_) for $irc->{infile}, $mat->{infile}, $wha->{infile};
+                Hermod::relayToFile($text, $_) for $irc->{infile};
+                Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
                 Hermod::relay2mm($text,$mm) if defined $mm;
                 Hermod::relay2tel($tel,$text) if defined $tel;
 
@@ -159,10 +159,10 @@ for (;;) {
         if ($text =~ /\w/) {
 
             my $pre = "[sig] $anonsender: ";
-            Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
-            Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
-            Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
-            Hermod::relayToFile("$pre$text\n", $_) for $mat->{infile}, $wha->{infile};
+            Hermod::relay2tel($tel,"$pre$text\n",$dbg) if defined $tel;
+            Hermod::relay2irc("$text\n",$irc,$pre,$dbg) if defined $irc;
+            Hermod::relay2mm("$pre$text\n",$mm,$dbg) if defined $mm;
+            Hermod::relay2mtx("$pre$text\n",$mat,$dbg) if defined $mat;
         }
 
         # relay optional attachments
@@ -175,16 +175,16 @@ for (;;) {
             my $msg = "[sig] **$anonsender sends a $type: $sig->{url}/$att->{id}.$ext\n";
 
             # relay to telegram
-            Hermod::relayFile2tel($filemsg,$tel,$type) if defined $tel;
+            Hermod::relayFile2tel($filemsg,$tel,$type,$dbg) if defined $tel;
 
             # relay to Mattermost
-            Hermod::relayFile2mm($filemsg,$mm) if defined $mm;
+            Hermod::relayFile2mm($filemsg,$mm,$dbg) if defined $mm;
 
-            # relay to Matrix, Whatsapp
-            Hermod::relayToFile($filemsg, $_) for $mat->{infile}, $wha->{infile};
+            # relay to matrix
+            Hermod::relay2mtx($msg,$mat,$dbg) if defined $mat;
 
-            # relay to irc, matrix
-            Hermod::relayToFile($msg, $_) for $irc->{infile}, $mat->{infile};
+            # relay to irc, whatsapp
+            Hermod::relayToFile($msg, $_, $dbg) for $irc->{infile};
         }
     }
 }
