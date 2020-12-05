@@ -7,11 +7,23 @@ These scripts act as a gateway between a telegram group a signal group and an ir
 
 There are options to add gateways to a matrix room and/or a mattermost channel.
 
-The first thing to do is to register a telegram bot with the **botfather**.
+## Preparations
+
+The first thing to do is add bot accounts in the different channels or groups.
+
+You can register a telegram bot with the **botfather**.
 Then you can add the bot to the admins of the telegram channel you want to share with IRC. 
 Note the telegram API token and find the telegram group chat\_id.
 
 Reference: [Telegram Bot API](https://core.telegram.org/bots/api "Bot API")
+
+Register a username/password with the IRC service of your choice.
+
+Download sigal-cli from [Asamk's Github page](https://github.com/AsamK/signal-cli/releases) and register a phone number, see [Wiki Quickstart](https://github.com/AsamK/signal-cli/wiki/Quickstart)
+
+You can register a matrix account at [element.io](https://app.element.io/). Refer to the [Matrix API docs](https://matrix.org/docs/guides/client-server-api) on how to obtain an access token.
+
+You can register a mattermost account at [mattermost.com](https://customers.mattermost.com/cloud/signup). Refer to the [Mattermost API](https://api.mattermost.com/#tag/authentication) for how to obtain a bearer token.
 
 ## Configuration
 
@@ -33,7 +45,7 @@ The IRC bot and the webhook write to **signal-\>infile**. The poller will read i
 ## Setting up the hooks
 
 The gateway consists of daemon parts and webhooks. Place the
-webhook for telegram in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
+webhookis in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
 
 Next thing is to register the webhooks:
 
