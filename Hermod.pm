@@ -18,7 +18,7 @@ sub getmmlink {
 
 sub relay2mm {
 
-    my ($text,$mm) = @_;
+    my ($text,$mm,$dbg) = @_;
 
     my $json = JSON->new->allow_nonref;
     $text = $json->encode({text => $text});
@@ -41,7 +41,7 @@ sub relay2mm {
 
 sub relayFile2mm {
 
-    my ($line,$mm) = @_;
+    my ($line,$mm,$dbg) = @_;
     if ($line =~ /^FILE!/) {
 
         $line = substr $line,5;
@@ -81,9 +81,37 @@ sub relayFile2mm {
     }
 }
 
+sub relay2mtx {
+
+    my ($line,$mat,$dbg) = @_;
+
+    # we relay straight to matrix
+    (my $posturl = $mat->{posturl}) =~ s/__ROOM__/$mat->{room}/;
+    $posturl =~ s/__TOKEN__/$mat->{token}/;
+
+    if ($line =~ /^FILE!/) {
+
+        # send photo's, documents
+        $line = substr $line,5; 
+        my ($fileinfo,$caption) = split / /, $line, 2;
+        my ($url,$mime,$filepath) = split /!/, $fileinfo;
+
+        # TODO upload file
+        next;
+    }
+
+    chomp $line;
+    $line =~ s/"/\\"/g;
+    my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
+    my ($out, $err, $ret) = capture {
+        system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
+    };
+    print $dbg $out, $err if defined $dbg;
+}
+
 sub relay2tel {
 
-    my ($tel,$text) = @_;
+    my ($tel,$text,$dbg) = @_;
 
     # we relay straight to telegram
     my $telmsg;
@@ -94,7 +122,7 @@ sub relay2tel {
 
 sub relayFile2tel {
 
-    my ($line,$tel,$type) = @_;
+    my ($line,$tel,$type,$dbg) = @_;
     if ($line =~ /^FILE!/) {
 
         $line = substr $line,5;
@@ -120,7 +148,7 @@ sub relayFile2tel {
 
 sub relay2irc {
 
-    my ($text, $irc, $pre) = @_;
+    my ($text,$irc,$pre,$dbg) = @_;
     return unless $irc->{infile} and $text;
 
     my @lines = split /\n/, $text;
@@ -142,7 +170,7 @@ sub relay2irc {
 
 sub relayToFile {
 
-    my ($line, $infile) = @_;
+    my ($line,$infile,$dbg) = @_;
     return unless $infile and $line;
     open my $w, ">>:utf8", $infile;
     print $w $line if defined $w;
