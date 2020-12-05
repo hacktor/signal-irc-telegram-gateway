@@ -129,19 +129,19 @@ for (;;) {
                     $text = "https://$srv/_matrix/media/r0/download/$srv/$id ($text)";
                 }
 
-                $text = "[mtx] $sender: $text\n";
+                my $pre = "[mtx] $sender: ";
 
                 # relay to telegram
-                Hermod::relay2tel($tel,$text) if defined $tel;
+                Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
 
                 # relay to IRC
-                Hermod::relay2irc($text, $irc, "[mtx] $sender: ") if defined $irc;
+                Hermod::relay2irc("$text\n", $irc, $pre) if defined $irc;
 
                 # relay ro signal and whatsapp
-                Hermod::relayToFile($text, $_) for $sig->{infile}, $wha->{infile};
+                Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile};
 
                 # relay to mattermost
-                Hermod::relay2mm($text,$mm) if defined $mm;
+                Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
             }
         }
     };

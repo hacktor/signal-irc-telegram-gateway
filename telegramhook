@@ -29,6 +29,8 @@ unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id
     exit;
 }
 my $tel = $cfg->{telegram};
+open my $dbg, ">>", $tel->{debug} if defined $tel->{debug};
+
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
@@ -191,7 +193,7 @@ while (my $cgi = CGI::Fast->new) {
         my $pre = "[tel] $first $last: ";
 
         # send to irc
-        Hermod::relay2irc("$pre$ftext\n",$irc,$pre) if defined $irc;
+        Hermod::relay2irc("$ftext\n",$irc,$pre) if defined $irc;
 
         # send to matrix
         Hermod::relayToFile("$pre$ftext\n", $mat->{infile});
@@ -200,7 +202,7 @@ while (my $cgi = CGI::Fast->new) {
         if ($text and $text !~ /\*\* sends /) {
 
             # relay to signal, whatsapp
-            Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile}
+            Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile}, $wha->{infile};
 
             # send to mattermost
             Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;

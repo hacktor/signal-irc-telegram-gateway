@@ -158,11 +158,11 @@ for (;;) {
         # relay to all chats
         if ($text =~ /\w/) {
 
-            $text = "[sig] $anonsender: $text\n";
-            Hermod::relay2tel($tel,$text) if defined $tel;
-            Hermod::relay2irc($text,$irc,"[sig] $anonsender: ") if defined $irc;
-            Hermod::relay2mm($text,$mm) if defined $mm;
-            Hermod::relayToFile($text, $_) for $mat->{infile}, $wha->{infile};
+            my $pre = "[sig] $anonsender: ";
+            Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
+            Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
+            Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
+            Hermod::relayToFile("$pre$text\n", $_) for $mat->{infile}, $wha->{infile};
         }
 
         # relay optional attachments

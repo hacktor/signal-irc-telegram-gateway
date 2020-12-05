@@ -31,21 +31,26 @@ open my $dbg, ">>", $mm->{debug} if defined $mm->{debug};
 while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '{}';
     print $dbg $body if defined $dbg;
-    my $dj = decode_json( $body );
+    my $dj;
+    eval {
+        $dj = decode_json( $body );
+    };
+    next if $@;
 
     # check intoken, channel and not from me
     if ($dj->{token} eq $mm->{intoken} and $dj->{channel_id} eq $mm->{channel_id} and $dj->{user_id} ne $mm->{user_id}) {
 
-        $text = "[mm] $dj->{user_name}: $dj->{text}\n";
+        my $text = "$dj->{text}\n";
+        my $pre = "[mm] $dj->{user_name}: ";
 
         # send to irc
-        Hermod::relay2irc($text,$irc,"[mm] $dj->{user_name}: ") if defined $irc;
+        Hermod::relay2irc($text,$irc,$pre) if defined $irc;
 
         # send to telegram
-        Hermod::relay2tel($cfg->{telegram},"[mm] $dj->{user_name}: ".$dj->{text}) if defined $cfg->{telegram};
+        Hermod::relay2tel($cfg->{telegram},"$pre$text") if defined $cfg->{telegram};
 
         # send to matrix, signal, whatsapp
-        Hermod::relayToFile("[mm] $dj->{user_name}: $dj->{text}\n", $_) for $mat->{infile}, $sig->{infile}, $wha->{infile};
+        Hermod::relayToFile("$pre$text", $_) for $mat->{infile}, $sig->{infile}, $wha->{infile};
 
         if ($dj->{file_ids}) {
 
