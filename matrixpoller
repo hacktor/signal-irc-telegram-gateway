@@ -58,48 +58,11 @@ if ($@) {
     exit 1;
 }
 
-# tailing matrix infile for stuff to send
-open my $tail, "<", $mat->{infile} or die @_;
-my $inode = (stat($mat->{infile}))[1];
-# SEEK_END
-seek($tail, 0, 2) or die @_;
 for (;;) {
+
     sleep 5; # not to get too tight loop
 
-    # check if logfiles haven't turned over below our feet
-    if ($inode != (stat($mat->{infile}))[1]) {
-        close $tail;
-        $inode = (stat($mat->{infile}))[1];
-        open($tail,$mat->{infile}) or next;
-    } else {
-        # SEEK_CUR
-        seek($tail, 0, 1);
-    }
-
-    # send new messages to matrix group
-    while (my $line = <$tail>) {
-
-        if ($line =~ /^FILE!/) {
-
-            # send photo's, documents
-            $line = substr $line,5;
-            my ($fileinfo,$caption) = split / /, $line, 2;
-            my ($url,$mime,$filepath) = split /!/, $fileinfo;
-
-            # TODO upload file
-            next;
-        }
-
-        chomp $line;
-        $line =~ s/"/\\"/g;
-        my $body = '{"msgtype":"m.text", "body":"'.$line.'"}';
-        my ($out, $err, $ret) = capture {
-            system("curl", "-s", "-XPOST", "-d", "$body", "$posturl");
-        };
-        print $dbg $out, $err if defined $dbg;
-    }
-
-    # now poll the matrix group for new messages
+    # poll the matrix group for new messages
     ($syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
     $syncurl =~ s/__TOKEN__/$mat->{token}/;
     my ($out, $err, $ret) = capture {
