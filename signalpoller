@@ -17,6 +17,7 @@ use URI::Escape;
 use DBI;
 use Capture::Tiny 'tee';
 use Hermod;
+use Encode qw(decode_utf8);
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
@@ -81,7 +82,7 @@ for (;;) {
     if ($msg) {
 
         my ($out, $err, $ret) = tee {
-            system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", "$msg");
+            system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", decode_utf8("$msg"));
         };
         print $dbg $out, $err if defined $dbg;
         notify($err) if $err;
@@ -105,7 +106,7 @@ for (;;) {
 
         my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
         my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
-        my $text = (defined $datamsg->{message}) ? $datamsg->{message} : "";
+        my $text = (defined $datamsg->{message}) ? decode_utf8($datamsg->{message}) : "";
         my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
 
         # anonymize sender telephone

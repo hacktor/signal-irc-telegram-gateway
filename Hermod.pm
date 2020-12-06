@@ -6,6 +6,7 @@ use WWW::Curl::Easy;
 use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
+use Encode qw(encode_utf8);
 
 sub getmmlink {
 
@@ -126,6 +127,7 @@ sub relay2tel {
 
     # we relay straight to telegram
     my $telmsg;
+    $text = encode_utf8($text);
     eval { $telmsg = uri_escape($text); };
     $telmsg = uri_escape_utf8($text) if $@;
     my ($out, $err, $ret) = capture {
