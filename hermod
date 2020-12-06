@@ -13,6 +13,7 @@ use JSON qw( decode_json );
 use TOML;
 use DBI;
 use Hermod;
+use Encode qw( decode_utf8 );
 
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
@@ -96,7 +97,7 @@ sub irc_public {
 
     }
 
-    my $text = "[irc] $nick: $what\n";
+    my $text = decode_utf8("[irc] $nick: $what\n");
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -132,7 +133,7 @@ sub irc_ctcp_action {
     # handle /me events
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
-    my $text = "[irc] ***$nick $what\n";
+    my $text = decode_utf8("[irc] ***$nick $what\n");
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -144,7 +145,7 @@ sub irc_nick {
     # handle /nick events
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
-    my $text = "[irc] $nick is now known as $who\n";
+    my $text = decode_utf8("[irc] $nick is now known as $who\n");
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -157,7 +158,7 @@ sub irc_join {
     my ($who,$channel) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
     return if $nick eq $cfg->{irc}->{nick};
-    my $text = "[irc] $nick joined the chat\n";
+    my $text = decode_utf8("[irc] $nick joined the chat\n");
     if (defined $cfg->{irc}->{showjoin}) {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
@@ -171,7 +172,7 @@ sub irc_quit {
     # someone leaves the channel
     my ($who,$msg) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
-    my $text = "[irc] $nick quit the chat ($msg)\n";
+    my $text = decode_utf8("[irc] $nick quit the chat ($msg)\n");
     if (defined $cfg->{irc}->{showquit}) {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
@@ -186,7 +187,7 @@ sub irc_353 {
     my ($names) = @_[ARG1];
     $names =~ s/:(.*)$/$1/;
     my @users = split / /, $names;
-    my $text = "IRC users: " . (join ', ', @users[2..$#users]) . "\n";
+    my $text = decode_utf8("IRC users: " . (join ', ', @users[2..$#users]) . "\n");
 
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
 
