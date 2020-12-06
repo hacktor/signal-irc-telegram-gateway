@@ -9,6 +9,25 @@ There are options to add gateways to a matrix room and/or a mattermost channel.
 
 ## Preparations
 
+### Used perl modules
+
+Here is a list of perl modules needed for running these scripts:
+```
+Capture::Tiny
+Capture::Tiny
+CGI::Fast
+DBI
+JSON;
+POE::Component::IRC
+POE::Component::IRC::Plugin::FollowTail
+Text::Unidecode
+TOML
+URI::Escape
+WWW::Curl::Easy
+WWW::Curl::Form
+Dancer
+```
+
 The first thing to do is add bot accounts in the different channels or groups.
 
 You can register a telegram bot with the **botfather**.
