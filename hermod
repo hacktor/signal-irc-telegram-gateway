@@ -235,7 +235,7 @@ sub irc_bot_addressed {
     my ($sender, $what) = @_[SENDER, ARG2];
     my $nick = ( split /!/, $_[ARG0] )[0];
  
-    my $text = "Hi $nick, you addressed me, but I'm just a messenger bot, please don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig] or [mtx] tag.";
+    my $text = "Hi $nick, you addressed me, but I'm just a messenger bot, please don't shoot me. I relay messages between IRC, Telegram, Signal, Mattermost and Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig], [mm] or [mtx] tag.";
     $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
     print $dbg "$nick addressed me with the message '$what'\n" if defined $dbg;
 }
@@ -244,7 +244,7 @@ sub irc_bot_mentioned {
     my ($sender, $what) = @_[SENDER, ARG2];
     my ($nick) = ( split /!/, $_[ARG0] )[0];
  
-    my $text = "Hi $nick, you mentioned me. I'm a messenger bot, don't shoot me. I relay messages between IRC, Telegram, Signal or Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig] or [mtx] tag.";
+    my $text = "Hi $nick, you mentioned me. I'm a messenger bot, don't shoot me. I relay messages between IRC, Telegram, Signal, Mattermost and Matrix users. You can see the name of the person who spoke to you directly after the [tel], [sig], [mm] or [mtx] tag.";
     $irc->yield( 'privmsg', $cfg->{irc}->{channel}, "$text" );
     print $dbg "$nick mentioned my name with the message '$what'\n" if defined $dbg;
 }
