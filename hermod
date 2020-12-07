@@ -97,7 +97,10 @@ sub irc_public {
 
     }
 
-    my $text = decode_utf8("[irc] $nick: $what\n");
+    my $msg = "[irc] $nick: $what\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -133,7 +136,11 @@ sub irc_ctcp_action {
     # handle /me events
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
-    my $text = decode_utf8("[irc] ***$nick $what\n");
+
+    my $msg = "[irc] ***$nick $what\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -145,7 +152,11 @@ sub irc_nick {
     # handle /nick events
     my ($whowas,$who) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $whowas )[0];
-    my $text = decode_utf8("[irc] $nick is now known as $who\n");
+
+    my $msg = "[irc] $nick is now known as $who\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
@@ -158,7 +169,11 @@ sub irc_join {
     my ($who,$channel) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
     return if $nick eq $cfg->{irc}->{nick};
-    my $text = decode_utf8("[irc] $nick joined the chat\n");
+
+    my $msg = "[irc] $nick joined the chat\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
     if (defined $cfg->{irc}->{showjoin}) {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
@@ -172,7 +187,11 @@ sub irc_quit {
     # someone leaves the channel
     my ($who,$msg) = @_[ARG0, ARG1];
     my $nick = ( split /!/, $who )[0];
-    my $text = decode_utf8("[irc] $nick quit the chat ($msg)\n");
+
+    my $msg = "[irc] $nick quit the chat ($msg)\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
     if (defined $cfg->{irc}->{showquit}) {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
@@ -187,7 +206,10 @@ sub irc_353 {
     my ($names) = @_[ARG1];
     $names =~ s/:(.*)$/$1/;
     my @users = split / /, $names;
-    my $text = decode_utf8("IRC users: " . (join ', ', @users[2..$#users]) . "\n");
+
+    my $msg = "IRC users: " . (join ', ', @users[2..$#users]) . "\n";
+    my $text = '';
+    $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
 

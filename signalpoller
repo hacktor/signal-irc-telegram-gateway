@@ -81,8 +81,11 @@ for (;;) {
     }
     if ($msg) {
 
+        my $text = '';
+        $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+
         my ($out, $err, $ret) = tee {
-            system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", decode_utf8("$msg"));
+            system($sig->{cli},"-u",$sig->{phone},"send","-g", $sig->{gid}, "-m", "$text");
         };
         print $dbg $out, $err if defined $dbg;
         notify($err) if $err;
@@ -106,8 +109,11 @@ for (;;) {
 
         my $sender = (defined $sigmsg->{source}) ? $sigmsg->{source} : "";
         my $group = (defined $datamsg->{groupInfo}->{groupId}) ? $datamsg->{groupInfo}->{groupId} : "";
-        my $text = (defined $datamsg->{message}) ? decode_utf8($datamsg->{message}) : "";
         my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
+
+        my $msg = (defined $datamsg->{message}) ? $datamsg->{message} : "";
+        my $text = '';
+        $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
         # anonymize sender telephone
         my $anonsender = $sender;
