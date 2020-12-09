@@ -31,7 +31,7 @@ while (my $cgi = CGI::Fast->new) {
     my $body = (defined $cgi->param('POSTDATA')) ? $cgi->param('POSTDATA') : '';
     unless ($body) { nok("missing body"); next; }
 
-    print $dbg $body if defined $dbg;
+    print $dbg "$body\n" if defined $dbg;
     my $dj;
     eval {
         $dj = decode_json( $body );
