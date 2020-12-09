@@ -27,7 +27,7 @@ sub relay2mm {
     my ($text,$mm,$dbg) = @_;
 
     my $json = JSON->new->allow_nonref;
-    $text = $json->encode({text => $text});
+    $text = $json->encode({attachments => [{text => $text}]});
 
     my $curl = WWW::Curl::Easy->new;
     my $response_body;
