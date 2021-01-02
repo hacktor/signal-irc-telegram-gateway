@@ -102,6 +102,7 @@ for (;;) {
     my @lines = split /\n/, $out;
     for my $line (@lines) {
 
+        my $sav;
         my $sigmsg = $json->decode($line);
         next unless defined $sigmsg->{envelope}->{dataMessage};
         $sigmsg = $sigmsg->{envelope};
@@ -112,9 +113,19 @@ for (;;) {
         my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
 
         my $msg = (defined $datamsg->{message}) ? $datamsg->{message} : "";
-        $msg = (defined $datamsg->{quote}{text}) ? "(reply to: $datamsg->{quote}{text}) $msg" : $msg;
-        my $text = '';
-        $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
+        my $text = ''; $sav = $msg;
+        eval { $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg; };
+        $text = $sav if $@; # try undecoded string as last resort
+
+        # is the message a quote
+        my $quote = "";
+        if (defined $datamsg->{quote}{text}) {
+            my $qtext = $datamsg->{quote}{text}; chomp $qtext;
+            $qtext = (length($qtext) > 100) ? "(reply to ". substr($qtext,0,100) ."...) " : "(reply to: $qtext) ";
+            $sav = $qtext;
+            eval { $quote .= decode_utf8($qtext, Encode::FB_QUIET) while $qtext; };
+            $quote = $sav if $@; # try undecoded string as last resort
+        }
 
         # anonymize sender telephone
         my $anonsender = $sender;
@@ -164,13 +175,13 @@ for (;;) {
         next unless $text or $attach;
 
         # relay to all chats
+        my $pre = "[sig] $anonsender: ";
         if ($text =~ /\w/) {
 
-            my $pre = "[sig] $anonsender: ";
-            Hermod::relay2tel($tel,"$pre$text\n",$dbg) if defined $tel;
-            Hermod::relay2irc("$text\n",$irc,$pre,$dbg) if defined $irc;
-            Hermod::relay2mm("$pre$text\n",$mm,$dbg) if defined $mm;
-            Hermod::relay2mtx("$pre$text\n",$mat,$dbg) if defined $mat;
+            Hermod::relay2tel($tel,"$pre$quote$text\n",$dbg) if defined $tel;
+            Hermod::relay2irc("$quote$text\n",$irc,$pre,$dbg) if defined $irc;
+            Hermod::relay2mm("$pre$quote$text\n",$mm,$dbg) if defined $mm;
+            Hermod::relay2mtx("$pre$quote$text\n",$mat,$dbg) if defined $mat;
         }
 
         # relay optional attachments
