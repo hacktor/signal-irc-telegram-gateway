@@ -112,6 +112,7 @@ for (;;) {
         my $attach = (defined $datamsg->{attachments}) ? $datamsg->{attachments} : undef;
 
         my $msg = (defined $datamsg->{message}) ? $datamsg->{message} : "";
+        $msg = (defined $datamsg->{quote}{text}) ? "(reply to: $datamsg->{quote}{text}) $msg" : $msg;
         my $text = '';
         $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
