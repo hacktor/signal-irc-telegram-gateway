@@ -28,7 +28,7 @@ unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id
     exit;
 }
 my $tel = $cfg->{telegram};
-open my $dbg, ">>:utf8", $tel->{debug} if defined $tel->{debug};
+open my $dbg, ">>", $tel->{debug} if defined $tel->{debug};
 
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
