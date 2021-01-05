@@ -40,6 +40,7 @@ my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
+my $dis = $cfg->{discord} if defined $cfg->{discord};
 
 # tailing signal infile and telegram downloads for stuff to send
 open my $tail, "<", $sig->{infile} or die @_;
@@ -158,7 +159,8 @@ for (;;) {
                 # notify chats
                 Hermod::relayToFile($text, $_) for $irc->{infile};
                 Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-                Hermod::relay2mm($text,$mm) if defined $mm;
+                Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+                Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
                 Hermod::relay2tel($tel,$text) if defined $tel;
 
                 next;
@@ -176,12 +178,13 @@ for (;;) {
 
         # relay to all chats
         my $pre = "[sig] $anonsender: ";
-        if ($text =~ /\w/) {
+        if ($text =~ /./) {
 
             Hermod::relay2tel($tel,"$pre$quote$text\n",$dbg) if defined $tel;
             Hermod::relay2irc("$quote$text\n",$irc,$pre,$dbg) if defined $irc;
             Hermod::relay2mm("$pre$quote$text\n",$mm,$dbg) if defined $mm;
             Hermod::relay2mtx("$pre$quote$text\n",$mat,$dbg) if defined $mat;
+            Hermod::relay2dis("$pre$quote$text\n",$dis,$dbg) if defined $dis;
         }
 
         # relay optional attachments
@@ -201,6 +204,9 @@ for (;;) {
 
             # relay to matrix
             Hermod::relay2mtx($msg,$mat,$dbg) if defined $mat;
+
+            # relay to discord
+            Hermod::relay2dis($msg,$dis,$dbg) if defined $dis;
 
             # relay to irc
             Hermod::relayToFile($msg, $_, $dbg) for $irc->{infile};

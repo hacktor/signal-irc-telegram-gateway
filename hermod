@@ -26,6 +26,7 @@ my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
+my $dis = $cfg->{discord} if defined $cfg->{discord};
 
 my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
 
@@ -104,6 +105,7 @@ sub irc_public {
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
     Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
@@ -144,6 +146,7 @@ sub irc_ctcp_action {
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
     Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
@@ -160,6 +163,7 @@ sub irc_nick {
     Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
     Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
 }
 
@@ -178,6 +182,7 @@ sub irc_join {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
         Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+        Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
         Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
     }
 }
@@ -196,6 +201,7 @@ sub irc_quit {
         Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
         Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
+        Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
         Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
     }
 }

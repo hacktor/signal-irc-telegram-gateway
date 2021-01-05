@@ -35,6 +35,7 @@ my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $tel = $cfg->{telegram} if defined $cfg->{telegram};
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
+my $dis = $cfg->{discord} if defined $cfg->{discord};
 
 (my $syncurl = $mat->{syncurl}) =~ s/__SINCE__/$mat->{since}/;
 $syncurl =~ s/__TOKEN__/$mat->{token}/;
@@ -93,17 +94,11 @@ for (;;) {
 
                 my $pre = "[mtx] $sender: ";
 
-                # relay to telegram
                 Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
-
-                # relay to IRC
                 Hermod::relay2irc("$text\n", $irc, $pre) if defined $irc;
-
-                # relay ro signal
                 Hermod::relayToFile("$pre$text\n", $_) for $sig->{infile};
-
-                # relay to mattermost
                 Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
+                Hermod::relay2dis("$pre$text\n",$dis) if defined $dis;
             }
         }
     };

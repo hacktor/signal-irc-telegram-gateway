@@ -162,6 +162,23 @@ sub relayFile2tel {
     }
 }
 
+sub relay2dis {
+
+    my ($text,$dis,$dbg) = @_;
+
+    # we relay straight to discord
+    my $json = JSON->new->allow_nonref;
+    my $dismsg = {
+        username => $dis->{username},
+        content => $text,
+    };
+    $text = $json->encode($dismsg);
+    my ($out, $err, $ret) = capture {
+        system("curl", "-s", "-H", "Content-Type: application/json", "-d", "$text", "$dis->{webhook}");
+    };
+    print $dbg $out, $err if defined $dbg;
+}
+
 sub relay2irc {
 
     my ($text,$irc,$pre,$dbg) = @_;

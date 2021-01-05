@@ -28,12 +28,13 @@ unless (defined $cfg->{telegram}->{token} and defined $cfg->{telegram}->{chat_id
     exit;
 }
 my $tel = $cfg->{telegram};
-open my $dbg, ">>", $tel->{debug} if defined $tel->{debug};
+open my $dbg, ">>:utf8", $tel->{debug} if defined $tel->{debug};
 
 my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $sig = $cfg->{signal} if defined $cfg->{signal};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
+my $dis = $cfg->{discord} if defined $cfg->{discord};
 
 # bots cannot get a list of group members, so we keep a database
 my $dbh = DBI->connect("dbi:SQLite:dbname=$tel->{db}", "", "", { RaiseError => 1 }, )
@@ -163,6 +164,7 @@ while (my $cgi = CGI::Fast->new) {
             Hermod::relayToFile($text,$_,$dbg) for $irc->{infile}, $sig->{infile};
             Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
             Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+            Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
             ok("New member(s): $members\n");
         }
         
@@ -175,6 +177,7 @@ while (my $cgi = CGI::Fast->new) {
             Hermod::relayToFile($text,$_,$dbg) for $irc->{infile}, $sig->{infile};
             Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
             Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
+            Hermod::relay2dis($text,$mm,$dbg) if defined $mm;
 
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
@@ -197,6 +200,9 @@ while (my $cgi = CGI::Fast->new) {
 
         # send to matrix
         Hermod::relay2mtx("$pre$ftext\n",$mat,$dbg) if defined $mat;
+
+        # send to discord
+        Hermod::relay2dis("$pre$ftext\n",$dis,$dbg) if defined $dis;
 
         # for signal, mattermost, we skip document, photo links as they are uploaded
         if ($text and $text !~ /\*\* sends /) {
