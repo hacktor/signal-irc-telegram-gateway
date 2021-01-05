@@ -1,0 +1,112 @@
+#!/usr/bin/env perl
+
+use v5.10;
+use strict;
+use warnings;
+
+package Bot;
+use Moo;
+use strictures 2;
+use Mojo::Discord;
+use namespace::clean;
+use Data::Dumper;
+
+has token       => ( is => 'ro' );
+has name        => ( is => 'ro', default => 'PPNL Brug' );
+has url         => ( is => 'ro', default => 'https://piratenpartij.nl' );
+has version     => ( is => 'ro', default => '1.0' );
+has reconnect   => ( is => 'rw', default => 1 );
+has loglevel    => ( is => 'ro', default => 'error' );
+has logdir      => ( is => 'ro', default => '/tmp' );
+
+has discord     => ( is => 'lazy', builder => sub {
+    my $self = shift;
+    Mojo::Discord->new(
+        token       => $self->token,
+        name        => $self->name,
+        url         => $self->url,
+        version     => $self->version,
+        reconnect   => $self->reconnect,
+        loglevel    => $self->loglevel,
+        logdir      => $self->logdir,
+    )
+});
+
+sub start
+{
+    my ($self,$cfg) = @_;
+
+    my $tel = $cfg->{telegram} if defined $cfg->{telegram};
+    my $irc = $cfg->{irc} if defined $cfg->{irc};
+    my $mat = $cfg->{matrix} if defined $cfg->{matrix};
+    my $sig = $cfg->{signal} if defined $cfg->{signal};
+    my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
+    my $dis = $cfg->{discord} if defined $cfg->{discord};
+
+    $self->discord->gw->on('READY' => sub {
+        my ($gw, $hash) = @_;
+
+        print localtime(time) . " Connected to Discord.\n";
+    });
+
+    $self->discord->gw->on('MESSAGE_CREATE' => sub {
+        my ($gw, $msg) = @_;
+
+        my $text = $msg->{'content'};
+        my $channel_id = $msg->{'channel_id'};
+        my $user = $msg->{'author'}{'username'};
+        my $pre = "[dis] $user: ";
+
+        if ($msg->{'channel_id'} eq $dis->{'channel_id'} and $msg->{author}->{id} ne $dis->{user_id}) {
+            #print Dumper $msg;
+            if ($text) {
+                #print "Forwarding $pre$text\n";
+                Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
+                Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
+                Hermod::relayToFile("$pre$text\n",$_) for $sig->{infile};
+                Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
+                Hermod::relay2mtx("$pre$text\n",$mat) if defined $mat;
+            }
+            if (defined $msg->{attachments} and ref $msg->{attachments} eq "ARRAY") {
+
+                $pre = "[dis] **$user sends file ";
+                for my $att (@{$msg->{attachments}}) {
+                    $text = "$att->{filename} $att->{url}\n";
+                    Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
+                    Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
+                    Hermod::relayToFile("$pre$text\n",$_) for $sig->{infile};
+                    Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
+                    Hermod::relay2mtx("$pre$text\n",$mat) if defined $mat;
+                }
+            }
+        }
+        $self->discord->send_ack_dm($msg->{channel_id}, $msg->{id}, $user, 'success!') if ( lc $msg eq 'test' );
+    });
+
+    $self->discord->init();
+
+    Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+}
+
+1;
+
+use Bot;
+use Hermod;
+use TOML;
+use JSON;
+
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
+
+my $dis = $cfg->{discord} if defined $cfg->{discord};
+
+my $bot = Bot->new(
+    token       => $dis->{token},
+    logdir      => $dis->{logdir},
+);
+
+$bot->start($cfg);
+
