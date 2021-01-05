@@ -59,13 +59,16 @@ sub start
 
         if ($msg->{'channel_id'} eq $dis->{'channel_id'} and $msg->{author}->{id} ne $dis->{user_id}) {
             #print Dumper $msg;
+
+            my $reply = (defined $msg->{referenced_message}{content}) ?
+                    "(reply to: $msg->{referenced_message}{content}) " : "";
+
             if ($text) {
-                #print "Forwarding $pre$text\n";
-                Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
-                Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
-                Hermod::relayToFile("$pre$text\n",$_) for $sig->{infile};
-                Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
-                Hermod::relay2mtx("$pre$text\n",$mat) if defined $mat;
+                Hermod::relay2tel($tel,"$pre$reply$text\n") if defined $tel;
+                Hermod::relay2irc("$reply$text\n",$irc,$pre) if defined $irc;
+                Hermod::relayToFile("$pre$reply$text\n",$_) for $sig->{infile};
+                Hermod::relay2mm("$pre$reply$text\n",$mm) if defined $mm;
+                Hermod::relay2mtx("$pre$reply$text\n",$mat) if defined $mat;
             }
             if (defined $msg->{attachments} and ref $msg->{attachments} eq "ARRAY") {
 
