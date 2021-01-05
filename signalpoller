@@ -178,7 +178,7 @@ for (;;) {
 
         # relay to all chats
         my $pre = "[sig] $anonsender: ";
-        if ($text =~ /./) {
+        if ($text =~ /\S/) {
 
             Hermod::relay2tel($tel,"$pre$quote$text\n",$dbg) if defined $tel;
             Hermod::relay2irc("$quote$text\n",$irc,$pre,$dbg) if defined $irc;

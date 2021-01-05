@@ -177,7 +177,7 @@ while (my $cgi = CGI::Fast->new) {
             Hermod::relayToFile($text,$_,$dbg) for $irc->{infile}, $sig->{infile};
             Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
             Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-            Hermod::relay2dis($text,$mm,$dbg) if defined $mm;
+            Hermod::relay2dis($text,$mm,$dbg) if defined $dis;
 
             ok("Leaving member: $msg->{left_chat_member}->{first_name}\n");
         }
