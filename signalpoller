@@ -143,7 +143,7 @@ for (;;) {
 
         # check for setnick command
         if ($text =~ /^!setnick/) {
-            (my $nick = $text) =~ s/^!setnick.([\w\-_\.]+).*$/$1/;
+            (my $nick = $text) =~ s/^!setnick.//s;
             if ($nick) {
                 setalias($sig,$sender,$nick);
                 $sig->{nicks}->{$sender} = $nick;
