@@ -7,7 +7,8 @@
 # 2019, Ruben de Groot
 
 use strict;
-use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::IRC::Plugin::BotAddressed Component::SSLify);
+use POE qw(Component::IRC Component::IRC::Plugin::FollowTail Component::IRC::Plugin::Connector
+           Component::IRC::Plugin::BotAddressed Component::SSLify);
 use URI::Escape;
 use JSON qw( decode_json );
 use TOML;
@@ -43,7 +44,7 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_nick irc_tail_input irc_ctcp_action irc_353 irc_bot_addressed irc_bot_mentioned) ],
+        main => [ qw(_default _start irc_001 irc_public irc_msg irc_join irc_quit irc_nick irc_tail_input irc_ctcp_action irc_353 irc_bot_addressed irc_bot_mentioned lag_o_meter) ],
     ],
     heap => { irc => $irc },
 );
@@ -51,6 +52,10 @@ POE::Session->create(
 $poe_kernel->run();
 
 sub _start {
+
+    my ($kernel, $heap) = @_[KERNEL ,HEAP];
+    $heap->{connector} = POE::Component::IRC::Plugin::Connector->new();
+    $irc->plugin_add( 'Connector' => $heap->{connector} );
 
     # file to be read and send to the channel
     $irc->plugin_add( FollowTail => POE::Component::IRC::Plugin::FollowTail->new(
@@ -62,6 +67,14 @@ sub _start {
 
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
+    $kernel->delay( 'lag_o_meter' => 60 );
+    return;
+}
+
+sub lag_o_meter {
+    my ($kernel,$heap) = @_[KERNEL,HEAP];
+    print 'Time: ' . time() . ' Lag: ' . $heap->{connector}->lag() . "\n";
+    $kernel->delay( 'lag_o_meter' => 60 );
     return;
 }
 
