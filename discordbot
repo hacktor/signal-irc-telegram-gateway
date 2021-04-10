@@ -10,6 +10,7 @@ use strictures 2;
 use Mojo::Discord;
 use namespace::clean;
 use Data::Dumper;
+use JSON;
 
 has token       => ( is => 'ro' );
 has name        => ( is => 'ro', default => 'PPNL Brug' );
@@ -43,6 +44,8 @@ sub start
     my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
     my $dis = $cfg->{discord} if defined $cfg->{discord};
 
+    my $userurl = 'https://discordapp.com/api/v6/users/';
+
     $self->discord->gw->on('READY' => sub {
         my ($gw, $hash) = @_;
 
@@ -62,6 +65,22 @@ sub start
 
             my $reply = (defined $msg->{referenced_message}{content}) ?
                     "(reply to: $msg->{referenced_message}{content}) " : "";
+
+            # building users id to name hash
+            $dis->{users}{$msg->{author}{id}} = $user;
+
+            my @mentions = $text =~ m/<[\@\&\!]+([0-9]+)>/;
+            for my $m (@mentions) {
+                unless (defined $dis->{users}{$m}) {
+                    eval {
+                        my $str = qx( curl -s -XGET -H "Content-Type: application/json" -H "Authorization: Bot $dis->{token}"  "$userurl$m" );
+                        my $j = JSON->new->allow_nonref;
+                        my $json = $j->decode($str);
+                        $dis->{users}{$m} = $json->{username} if defined $json->{username};
+                    };
+                }
+                $text =~ s/<[\@\&\!]+$m>/\@$dis->{users}{$m}/g if defined $dis->{users}{$m};
+            }
 
             if ($text) {
                 Hermod::relay2tel($tel,"$pre$reply$text\n") if defined $tel;
