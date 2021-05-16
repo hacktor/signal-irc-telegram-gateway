@@ -50,7 +50,7 @@ while (my $cgi = CGI::Fast->new) {
         Hermod::relay2tel($tel,"$pre$text",$dbg) if defined $tel;
         Hermod::relay2mtx("$pre$text", $mat, $dbg) if defined $mat;
         Hermod::relay2dis("$pre$text", $dis, $dbg) if defined $dis;
-        Hermod::relayToFile("$pre$text", $_) for $sig->{infile};
+        Hermod::relay2sig("$pre$text", $sig, $dbg) if defined $sig;
 
         if ($dj->{file_ids}) {
 
@@ -63,10 +63,11 @@ while (my $cgi = CGI::Fast->new) {
                     $pre = "[mm] **$dj->{user_name} sends a file: ";
 
                     # Relay links to other chats
+                    Hermod::relay2irc($link,$irc,$pre,$dbg) if defined $irc;
                     Hermod::relay2tel($tel,"$pre$link\n",$dbg) if defined $tel;
                     Hermod::relay2mtx("$pre$link\n",$mat,$dbg) if defined $mat;
                     Hermod::relay2dis("$pre$link\n",$dis,$dbg) if defined $dis;
-                    Hermod::relayToFile("$pre$link\n", $_,$dbg) for $sig->{infile}, $irc->{infile};
+                    Hermod::relay2sig("$pre$link\n",$sig,$dbg) if defined $sig;
                 }
             }
         }
