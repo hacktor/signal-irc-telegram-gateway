@@ -7,6 +7,7 @@ use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
 use Encode qw(encode_utf8);
+use Capture::Tiny 'capture';
 
 sub getmmlink {
 
@@ -210,6 +211,28 @@ sub relayToFile {
     open my $w, ">>:utf8", $infile;
     print $w $line if defined $w;
     close $w;
+}
+
+sub relay2sig {
+    my ($line,$sig,$dbg) = @_;
+    if ($line =~ /^FILE!/) {
+        # send photo's, documents
+        $line = substr $line,5;
+        my ($fileinfo,$caption) = split / /, $line, 2;
+        my ($url,$mime,$file) = split /!/, $fileinfo;
+        my ($out, $err, $ret) = capture {
+            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$caption","-a","$file");
+        };
+        print $dbg $out, $err if defined $dbg;
+        notify($err) if $err;
+    } else {
+        my ($out, $err, $ret) = capture {
+            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$line",);
+        $msg .= $line;
+        };
+        print $dbg $out, $err if defined $dbg;
+        notify($err) if $err;
+    }
 }
 
 1;
