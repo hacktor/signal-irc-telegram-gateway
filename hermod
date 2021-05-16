@@ -119,7 +119,7 @@ sub irc_public {
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
     Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
+    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
 }
 
 sub irc_msg {
@@ -160,7 +160,7 @@ sub irc_ctcp_action {
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
     Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
+    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
 }
 
 sub irc_nick {
@@ -177,7 +177,7 @@ sub irc_nick {
     Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
     Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
     Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
+    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
 }
 
 sub irc_join {
@@ -196,7 +196,7 @@ sub irc_join {
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
         Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
         Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-        Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
+        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
     }
 }
 
@@ -215,7 +215,7 @@ sub irc_quit {
         Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
         Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
         Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-        Hermod::relayToFile($text,$_,$dbg) for $sig->{infile};
+        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
     }
 }
 
@@ -238,7 +238,7 @@ sub irc_353 {
     } elsif (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'SIG') {
 
         $text .= "Telegram users: " . teleusers() . "\n" if defined $tel->{db};
-        Hermod::relayToFile($text,$sig->{infile}) if defined $sig;
+        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
     }
 }
 
