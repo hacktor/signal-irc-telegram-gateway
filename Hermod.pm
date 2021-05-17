@@ -224,14 +224,12 @@ sub relay2sig {
             system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$caption","-a","$file");
         };
         print $dbg $out, $err if defined $dbg;
-        notify($err) if $err;
     } else {
         my ($out, $err, $ret) = capture {
             system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$line",);
         $msg .= $line;
         };
         print $dbg $out, $err if defined $dbg;
-        notify($err) if $err;
     }
 }
 
