@@ -115,11 +115,11 @@ sub irc_public {
     my $text = '';
     $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
-    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
-    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+    Hermod::relay2tel($tel,$text,$dbg);
+    Hermod::relay2mm($text,$mm,$dbg);
+    Hermod::relay2mtx($text,$mat,$dbg);
+    Hermod::relay2dis($text,$dis,$dbg);
+    Hermod::relay2sig($text,$sig,$dbg);
 }
 
 sub irc_msg {
@@ -156,11 +156,11 @@ sub irc_ctcp_action {
     my $text = '';
     $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
-    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
-    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+    Hermod::relay2tel($tel,$text,$dbg);
+    Hermod::relay2mm($text,$mm,$dbg);
+    Hermod::relay2mtx($text,$mat,$dbg);
+    Hermod::relay2dis($text,$dis,$dbg);
+    Hermod::relay2sig($text,$sig,$dbg);
 }
 
 sub irc_nick {
@@ -173,11 +173,11 @@ sub irc_nick {
     my $text = '';
     $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
-    Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
-    Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-    Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-    Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-    Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+    Hermod::relay2tel($tel,$text,$dbg);
+    Hermod::relay2mm($text,$mm,$dbg);
+    Hermod::relay2mtx($text,$mat,$dbg);
+    Hermod::relay2dis($text,$dis,$dbg);
+    Hermod::relay2sig($text,$sig,$dbg);
 }
 
 sub irc_join {
@@ -192,11 +192,11 @@ sub irc_join {
     $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
     if (defined $cfg->{irc}->{showjoin}) {
-        Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
-        Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-        Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-        Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+        Hermod::relay2tel($tel,$text,$dbg);
+        Hermod::relay2mm($text,$mm,$dbg);
+        Hermod::relay2mtx($text,$mat,$dbg);
+        Hermod::relay2dis($text,$dis,$dbg);
+        Hermod::relay2sig($text,$sig,$dbg);
     }
 }
 
@@ -211,11 +211,11 @@ sub irc_quit {
     $text .= decode_utf8($msg, Encode::FB_QUIET) while $msg;
 
     if (defined $cfg->{irc}->{showquit}) {
-        Hermod::relay2tel($tel,$text,$dbg) if defined $tel;
-        Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-        Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-        Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+        Hermod::relay2tel($tel,$text,$dbg);
+        Hermod::relay2mm($text,$mm,$dbg);
+        Hermod::relay2mtx($text,$mat,$dbg);
+        Hermod::relay2dis($text,$dis,$dbg);
+        Hermod::relay2sig($text,$sig,$dbg);
     }
 }
 
@@ -233,12 +233,12 @@ sub irc_353 {
     if (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'TEL') {
 
         $text .= "Signal users: " . signalusers() . "\n" if defined $sig->{db};
-        Hermod::relay2tel($tel,$text) if defined $tel;
+        Hermod::relay2tel($tel,$text);
 
     } elsif (defined $cfg->{irc}->{names_asked} and $cfg->{irc}->{names_asked} eq 'SIG') {
 
         $text .= "Telegram users: " . teleusers() . "\n" if defined $tel->{db};
-        Hermod::relay2sig($text,$sig,$dbg) if defined $sig;
+        Hermod::relay2sig($text,$sig,$dbg);
     }
 }
 
