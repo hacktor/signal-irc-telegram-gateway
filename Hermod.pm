@@ -6,12 +6,13 @@ use WWW::Curl::Easy;
 use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
-use Encode qw(encode_utf8);
+use Encode qw(encode_utf8 decode_utf8);
 use Capture::Tiny 'capture';
 
 sub getmmlink {
 
     my ($id,$mm,$dbg) = @_;
+    return unless defined $mm;
     my $json = JSON->new->allow_nonref;
     my ($out, $err, $ret) = capture {
         system("curl", "-s", "-XGET", "-H", "Authorization: Bearer $mm->{bearer}", "$mm->{api}/files/$id/link");
@@ -26,6 +27,7 @@ sub getmmlink {
 sub relay2mm {
 
     my ($text,$mm,$dbg) = @_;
+    return unless defined $mm;
 
     my $json = JSON->new->allow_nonref;
     $text = $json->encode({attachments => [{text => $text}]});
@@ -47,6 +49,7 @@ sub relay2mm {
 sub relayFile2mm {
 
     my ($line,$mm,$dbg) = @_;
+    return unless defined $mm;
     if ($line =~ /^FILE!/) {
 
         $line = substr $line,5;
@@ -95,6 +98,7 @@ sub relayFile2mm {
 sub relay2mtx {
 
     my ($line,$mat,$dbg) = @_;
+    return unless defined $mat;
 
     # we relay straight to matrix
     (my $posturl = $mat->{posturl}) =~ s/__ROOM__/$mat->{room}/;
@@ -125,6 +129,7 @@ sub relay2mtx {
 sub relay2tel {
 
     my ($tel,$text,$dbg) = @_;
+    return unless defined $tel;
 
     # we relay straight to telegram
     my $telmsg;
@@ -140,6 +145,7 @@ sub relay2tel {
 sub relayFile2tel {
 
     my ($line,$tel,$type,$dbg) = @_;
+    return unless defined $tel;
     if ($line =~ /^FILE!/ and $tel->{token} and $tel->{chat_id} and $type) {
 
         $line = substr $line,5;
@@ -166,6 +172,7 @@ sub relayFile2tel {
 sub relay2dis {
 
     my ($text,$dis,$dbg) = @_;
+    return unless defined $dis;
 
     # we relay straight to discord
     my $json = JSON->new->allow_nonref;
@@ -183,6 +190,7 @@ sub relay2dis {
 sub relay2irc {
 
     my ($text,$irc,$pre,$dbg) = @_;
+    return unless defined $irc;
     return unless $irc->{infile} and $text;
 
     my @lines = split /\n/, $text;
@@ -215,21 +223,56 @@ sub relayToFile {
 
 sub relay2sig {
     my ($line,$sig,$dbg) = @_;
+    return unless defined $sig;
+    return unless $line;
+    my $text = '';
     if ($line =~ /^FILE!/) {
+
         # send photo's, documents
         $line = substr $line,5;
         my ($fileinfo,$caption) = split / /, $line, 2;
         my ($url,$mime,$file) = split /!/, $fileinfo;
+        $text .= decode_utf8($caption, Encode::FB_QUIET) while $caption;
         my ($out, $err, $ret) = capture {
-            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$caption","-a","$file");
+            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$text","-a","$file");
         };
         print $dbg $out, $err if defined $dbg;
+
     } else {
+
+        $text .= decode_utf8($line, Encode::FB_QUIET) while $line;
         my ($out, $err, $ret) = capture {
-            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$line",);
-        $msg .= $line;
+            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$text");
         };
         print $dbg $out, $err if defined $dbg;
+    }
+}
+
+sub signalinfilereader {
+
+    # this sub should be started as a helper thread by signalbot
+    # programs running under other uids like apache can output to signal->infile
+    my $sig = shift;
+
+    # tailing signal infile for stuff to send
+    open my $tail, "<", $sig->{infile} or die @_;
+    my $inode = (stat($sig->{infile}))[1];
+
+    # SEEK_END
+    seek($tail, 0, 2) or die @_;
+    for (;;) {
+        sleep 1; # not to get too tight loop
+
+        # check if logfiles haven't turned over below our feet
+        if ($inode != (stat($sig->{infile}))[1]) {
+            close $tail;
+            $inode = (stat($sig->{infile}))[1];
+            open($tail,$sig->{infile}) or next;
+        } else {
+            # SEEK_CUR
+            seek($tail, 0, 1);
+        }
+        relay2sig($_,$sig) for (<$tail>);
     }
 }
 
