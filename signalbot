@@ -8,6 +8,7 @@
 # 2021, Ruben de Groot
 
 use strict;
+use threads;
 use JSON;
 use TOML;
 use URI::Escape;
@@ -38,6 +39,9 @@ my $irc = $cfg->{irc} if defined $cfg->{irc};
 my $mat = $cfg->{matrix} if defined $cfg->{matrix};
 my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 my $dis = $cfg->{discord} if defined $cfg->{discord};
+
+# start a thread to keep a tail on the signal->infile
+my $thr = threads->create(\&Hermod::signalinfilereader,$sig,$dbg);
 
 for (;;) {
 
@@ -102,18 +106,18 @@ for (;;) {
 
                 # notify chats
                 $text = "[sig] $text";
-                Hermod::relayToFile($text, $_) for $irc->{infile};
-                Hermod::relay2mtx($text,$mat,$dbg) if defined $mat;
-                Hermod::relay2mm($text,$mm,$dbg) if defined $mm;
-                Hermod::relay2dis($text,$dis,$dbg) if defined $dis;
-                Hermod::relay2tel($tel,$text) if defined $tel;
+                Hermod::relay2irc($text,$irc,"",$dbg);
+                Hermod::relay2mtx($text,$mat,$dbg);
+                Hermod::relay2mm($text,$mm,$dbg);
+                Hermod::relay2dis($text,$dis,$dbg);
+                Hermod::relay2tel($tel,$text);
 
                 next;
             }
         } elsif ($text =~ /^!users/) {
 
             # user list asked; relay command to hermod
-            Hermod::relayToFile("CMD!SIG!users\n", $irc->{infile});
+            Hermod::relay2irc("CMD!SIG!users\n",$irc,"");
             next;
         }
 
@@ -125,11 +129,11 @@ for (;;) {
         my $pre = "[sig] $anonsender: ";
         if ($text =~ /\S/) {
 
-            Hermod::relay2tel($tel,"$pre$quote$text\n",$dbg) if defined $tel;
-            Hermod::relay2irc("$quote$text\n",$irc,$pre,$dbg) if defined $irc;
-            Hermod::relay2mm("$pre$quote$text\n",$mm,$dbg) if defined $mm;
-            Hermod::relay2mtx("$pre$quote$text\n",$mat,$dbg) if defined $mat;
-            Hermod::relay2dis("$pre$quote$text\n",$dis,$dbg) if defined $dis;
+            Hermod::relay2tel($tel,"$pre$quote$text\n",$dbg);
+            Hermod::relay2irc("$quote$text\n",$irc,$pre,$dbg);
+            Hermod::relay2mm("$pre$quote$text\n",$mm,$dbg);
+            Hermod::relay2mtx("$pre$quote$text\n",$mat,$dbg);
+            Hermod::relay2dis("$pre$quote$text\n",$dis,$dbg);
         }
 
         # relay optional attachments
@@ -144,10 +148,10 @@ for (;;) {
             (defined $mm->{bearer}) ?
                 Hermod::relayFile2mm($filemsg,$mm,$dbg) : 
                 Hermod::relay2mm($msg,$mm,$dbg);
-            Hermod::relayFile2tel($filemsg,$tel,$type,$dbg) if defined $tel;
-            Hermod::relay2mtx($msg,$mat,$dbg) if defined $mat;
-            Hermod::relay2dis($msg,$dis,$dbg) if defined $dis;
-            Hermod::relayToFile($msg, $_, $dbg) for $irc->{infile};
+            Hermod::relayFile2tel($filemsg,$tel,$type,$dbg);
+            Hermod::relay2mtx($msg,$mat,$dbg);
+            Hermod::relay2dis($msg,$dis,$dbg);
+            Hermod::relay2irc($msg,$irc,$dbg);
         }
     }
     close $dbus;
