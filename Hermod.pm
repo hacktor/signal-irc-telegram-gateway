@@ -248,32 +248,4 @@ sub relay2sig {
     }
 }
 
-sub signalinfilereader {
-
-    # this sub should be started as a helper thread by signalbot
-    # programs running under other uids like apache can output to signal->infile
-    my $sig = shift;
-
-    # tailing signal infile for stuff to send
-    open my $tail, "<", $sig->{infile} or die @_;
-    my $inode = (stat($sig->{infile}))[1];
-
-    # SEEK_END
-    seek($tail, 0, 2) or die @_;
-    for (;;) {
-        sleep 1; # not to get too tight loop
-
-        # check if logfiles haven't turned over below our feet
-        if ($inode != (stat($sig->{infile}))[1]) {
-            close $tail;
-            $inode = (stat($sig->{infile}))[1];
-            open($tail,$sig->{infile}) or next;
-        } else {
-            # SEEK_CUR
-            seek($tail, 0, 1);
-        }
-        relay2sig($_,$sig) for (<$tail>);
-    }
-}
-
 1;

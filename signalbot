@@ -41,7 +41,7 @@ my $mm = $cfg->{mattermost} if defined $cfg->{mattermost};
 my $dis = $cfg->{discord} if defined $cfg->{discord};
 
 # start a thread to keep a tail on the signal->infile
-my $thr = threads->create(\&Hermod::signalinfilereader,$sig,$dbg);
+my $thr = threads->create(\&signalinfilereader,$sig,$dbg);
 
 for (;;) {
 
@@ -157,6 +157,34 @@ for (;;) {
     close $dbus;
 }
 
+sub signalinfilereader {
+
+    # this sub should be started as a helper thread by signalbot
+    # programs running under other uids like apache can output to signal->infile
+    my $sig = shift;
+
+    # tailing signal infile for stuff to send
+    open my $tail, "<", $sig->{infile} or die @_;
+    my $inode = (stat($sig->{infile}))[1];
+
+    # SEEK_END
+    seek($tail, 0, 2) or die @_;
+    for (;;) {
+        sleep 1; # not to get too tight loop
+
+        # check if logfiles haven't turned over below our feet
+        if ($inode != (stat($sig->{infile}))[1]) {
+            close $tail;
+            $inode = (stat($sig->{infile}))[1];
+            open($tail,$sig->{infile}) or next;
+        } else {
+            # SEEK_CUR
+            seek($tail, 0, 1);
+        }
+        Hermod::relay2sig($_,$sig) for (<$tail>);
+    }
+}
+
 sub getalias {
     my $sig = shift;
     my $alias;
@@ -185,31 +213,5 @@ sub nickhelp {
         system($sig->{cli},"-u",$sig->{phone},"send","-m","$text",$phone);
     };
     print $dbg $out, $err if defined $dbg;
-    notify($err) if $err;
-}
-
-sub notify {
-    my $err = shift;
-    my $msg = '';
-    my $hostname = qx( hostname ); chomp $hostname;
-
-    # filters here
-    if ($err =~ /Failed to send \(some\) messages:/) {
-        while ($err =~ /Untrusted Identity for "(\+[\d]+)"/g) {
-            unless (defined $sig->{unreg}->{$1}) {
-                $sig->{unreg}->{$1} = 1;
-                $msg .= " $1";
-            }
-        }
-        $msg = "Untrusted users: $msg\n" if $msg;
-    } else {
-        $msg = $err;
-    }
-
-    # notify daily on errors
-    return if defined $sig->{errors}->{$msg} and $sig->{errors}->{$msg} > time - 86400;
-    $sig->{errors}->{$msg} = time;
-
-    qx( $cfg->{common}->{notify} "Signalpoller on $hostname: $msg" ) if defined $cfg->{common}->{notify} and $msg;
 }
 
