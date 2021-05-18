@@ -3,9 +3,14 @@
 [Hermod, or Hermóðr](https://en.wikipedia.org/wiki/Herm%C3%B3%C3%B0r) is a figure in Norse mythology,
 often considered the messenger of the gods
 
-These scripts act as a gateway between a telegram group a signal group and an irc channel.
+These scripts act as a gateway between groups of several chat protocols:
 
-There are options to add gateways to a matrix room and/or a mattermost channel.
+- IRC
+- Telegram
+- Signal
+- Matrix
+- Mattermost
+- Discord
 
 ## Preparations
 
@@ -21,11 +26,13 @@ JSON;
 POE::Component::IRC
 POE::Component::IRC::Plugin::FollowTail
 Text::Unidecode
+Encode
 TOML
 URI::Escape
 WWW::Curl::Easy
 WWW::Curl::Form
 Dancer
+Mojo::Discord
 ```
 
 The first thing to do is add bot accounts in the different channels or groups.
@@ -64,7 +71,7 @@ The IRC bot and the webhook write to **signal-\>infile**. The poller will read i
 ## Setting up the hooks
 
 The gateway consists of daemon parts and webhooks. Place the
-webhookis in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
+webhooks in an executable place of a webserver (like **https://webserver/cgi-bin/telegramhook**)
 
 Next thing is to register the webhooks:
 
@@ -160,9 +167,12 @@ that's all. You will see messages scrolling showing the login proces on IRC.
 
 ## Start the matrixpoller (optional)
 
+## Start the discordbot (optional)
+
 You probably want to run these in screen(1) from cron
 ```bash
 @reboot screen -S hermod -d -m while true; do /home/hermod/bin/hermod; done
-@reboot screen -S signal -d -m while true; do /home/hermod/bin/signalpoller; done
+@reboot screen -S signal -d -m while true; do /home/hermod/bin/signalbot; done
 @reboot screen -S matrix -d -m while true; do /home/hermod/bin/matrixpoller; done
+@reboot screen -S discord -d -m while true; do /home/hermod/bin/discordbot; done
 ```
