@@ -151,7 +151,7 @@ for (;;) {
             Hermod::relayFile2tel($filemsg,$tel,$type,$dbg);
             Hermod::relay2mtx($msg,$mat,$dbg);
             Hermod::relay2dis($msg,$dis,$dbg);
-            Hermod::relay2irc($msg,$irc,$dbg);
+            Hermod::relay2irc($msg,$irc,"",$dbg);
         }
     }
     close $dbus;
