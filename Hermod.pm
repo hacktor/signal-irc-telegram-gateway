@@ -6,7 +6,7 @@ use WWW::Curl::Easy;
 use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
-use Encode qw(encode_utf8 decode_utf8);
+use Encode qw(encode_utf8);
 use Capture::Tiny 'capture';
 
 sub getmmlink {
@@ -232,15 +232,17 @@ sub relay2sig {
         $line = substr $line,5;
         my ($fileinfo,$caption) = split / /, $line, 2;
         my ($url,$mime,$file) = split /!/, $fileinfo;
-        $text .= decode_utf8($caption, Encode::FB_QUIET) while $caption;
         my ($out, $err, $ret) = capture {
-            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$text","-a","$file");
+            system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$caption","-a","$file");
         };
         print $dbg $out, $err if defined $dbg;
 
     } else {
 
-        $text .= decode_utf8($line, Encode::FB_QUIET) while $line;
+        my $text = ''; $sav = $line;
+        eval { $text .= decode_utf8($msg, Encode::FB_QUIET) while $line; };
+        $text = $sav if $@; # try undecoded string as last resort
+
         my ($out, $err, $ret) = capture {
             system($sig->{cli},"--dbus","send","-g",$sig->{gid},"-m","$text");
         };

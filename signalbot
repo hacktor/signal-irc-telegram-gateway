@@ -181,7 +181,10 @@ sub signalinfilereader {
             # SEEK_CUR
             seek($tail, 0, 1);
         }
-        Hermod::relay2sig($_,$sig) for (<$tail>);
+        for (<$tail>) {
+            next if $_ =~ /^$/;
+            Hermod::relay2sig($_,$sig);
+        }
     }
 }
 

@@ -96,9 +96,9 @@ for (;;) {
 
                 Hermod::relay2tel($tel,"$pre$text\n");
                 Hermod::relay2irc("$text\n",$irc,$pre);
-                Hermod::relay2sig("$pre$text\n",$sig);
                 Hermod::relay2mm("$pre$text\n",$mm);
                 Hermod::relay2dis("$pre$text\n",$dis);
+                Hermod::relayToFile("$pre$text\n",$sig->{infile}) if defined $sig->{infile};
             }
         }
     };
