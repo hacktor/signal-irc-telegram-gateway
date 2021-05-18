@@ -81,22 +81,22 @@ sub start
             }
 
             if ($text) {
-                Hermod::relay2tel($tel,"$pre$reply$text\n") if defined $tel;
-                Hermod::relay2irc("$reply$text\n",$irc,$pre) if defined $irc;
-                Hermod::relay2sig("$pre$reply$text\n",$sig) if defined $sig;
-                Hermod::relay2mm("$pre$reply$text\n",$mm) if defined $mm;
-                Hermod::relay2mtx("$pre$reply$text\n",$mat) if defined $mat;
+                Hermod::relay2tel($tel,"$pre$reply$text\n");
+                Hermod::relay2irc("$reply$text\n",$irc,$pre);
+                Hermod::relay2sig("$pre$reply$text\n",$sig);
+                Hermod::relay2mm("$pre$reply$text\n",$mm);
+                Hermod::relay2mtx("$pre$reply$text\n",$mat);
             }
             if (defined $msg->{attachments} and ref $msg->{attachments} eq "ARRAY") {
 
                 $pre = "[dis] **$user sends file ";
                 for my $att (@{$msg->{attachments}}) {
                     $text = "$att->{filename} $att->{url}\n";
-                    Hermod::relay2tel($tel,"$pre$text\n") if defined $tel;
-                    Hermod::relay2irc("$text\n",$irc,$pre) if defined $irc;
-                    Hermod::relay2sig("$pre$text\n",$sig) if defined $sig;
-                    Hermod::relay2mm("$pre$text\n",$mm) if defined $mm;
-                    Hermod::relay2mtx("$pre$text\n",$mat) if defined $mat;
+                    Hermod::relay2tel($tel,"$pre$text\n");
+                    Hermod::relay2irc("$text\n",$irc,$pre);
+                    Hermod::relay2sig("$pre$text\n",$sig);
+                    Hermod::relay2mm("$pre$text\n",$mm);
+                    Hermod::relay2mtx("$pre$text\n",$mat);
                 }
             }
         }
