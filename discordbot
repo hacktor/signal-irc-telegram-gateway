@@ -85,7 +85,7 @@ sub start
                 Hermod::relay2irc("$reply$text\n",$irc,$pre);
                 Hermod::relay2mm("$pre$reply$text\n",$mm);
                 Hermod::relay2mtx("$pre$reply$text\n",$mat);
-                Hermod::relayToFile("$pre$reply$text\n",$sig->{infile}) if defined $sig->{infile};
+                Hermod::relay2sig("$pre$reply$text\n",$sig);
             }
             if (defined $msg->{attachments} and ref $msg->{attachments} eq "ARRAY") {
 
@@ -96,7 +96,7 @@ sub start
                     Hermod::relay2irc("$text\n",$irc,$pre);
                     Hermod::relay2mm("$pre$text\n",$mm);
                     Hermod::relay2mtx("$pre$text\n",$mat);
-                    Hermod::relayToFile("$pre$text\n",$sig->{infile}) if defined $sig->{infile};
+                    Hermod::relay2sig("$pre$text\n",$sig);
                 }
             }
         }

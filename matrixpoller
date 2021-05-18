@@ -98,7 +98,7 @@ for (;;) {
                 Hermod::relay2irc("$text\n",$irc,$pre);
                 Hermod::relay2mm("$pre$text\n",$mm);
                 Hermod::relay2dis("$pre$text\n",$dis);
-                Hermod::relayToFile("$pre$text\n",$sig->{infile}) if defined $sig->{infile};
+                Hermod::relay2sig("$pre$text\n",$sig);
             }
         }
     };

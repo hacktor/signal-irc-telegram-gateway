@@ -239,7 +239,7 @@ sub relay2sig {
 
     } else {
 
-        my $text = ''; $sav = $line;
+        my $text = ''; my $sav = $line;
         eval { $text .= decode_utf8($msg, Encode::FB_QUIET) while $line; };
         $text = $sav if $@; # try undecoded string as last resort
 
