@@ -211,9 +211,10 @@ sub setalias {
 sub nickhelp {
     my ($sig,$phone,$nick) = @_;
     my $text = 'You do not have a nickname set. You are now known as '.$nick;
-    $text .= '. To change this, simply type !setnick yournickname on a new line in the group or in a private message to me.';
+    $text .= '. To change this, simply type !setnick yournickname in the group or in a private message to me.';
     my ($out, $err, $ret) = tee {
         system($sig->{cli},"-u",$sig->{phone},"send","-m","$text",$phone);
+        system($sig->{cli},"--dbus","send","-m","$text",$phone);
     };
     print $dbg $out, $err if defined $dbg;
 }
