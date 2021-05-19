@@ -203,8 +203,11 @@ while (my $cgi = CGI::Fast->new) {
         Hermod::relay2mtx("$pre$ftext\n",$mat,$dbg);
         Hermod::relay2dis("$pre$ftext\n",$dis,$dbg);
 
-        # for signal we skip document, photo links as they are uploaded
-        Hermod::relayToFile("$pre$text\n",$sig->{infile},$dbg) if $text !~ /\*\* sends /;
+        # for signal, mattermost we skip document, photo links as they are uploaded
+        if ($text !~ /\*\* sends /) {
+            Hermod::relayToFile("$pre$text\n",$sig->{infile},$dbg) if $text !~ /\*\* sends /;
+            Hermod::relay2mm("$pre$text\n",$mm,$dbg) if $text !~ /\*\* sends /;
+        }
 
         # print file line to signal for uploading. same for mattermost when there is a token
         if ($fline) {
