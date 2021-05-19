@@ -46,7 +46,7 @@ my $thr = threads->create(\&signalinfilereader,$sig,$dbg);
 for (;;) {
 
     # tailing signal dbus
-    open(my $dbus, "-|", "$sig->{cli}", "-u", "$sig->{phone}", "daemon", "--json");
+    open(my $dbus, "-|", "$sig->{cli}", "-u", "$sig->{phone}", "--output=json", "daemon");
 
     # now poll the signal group for new messages
     my $json = JSON->new->allow_nonref;
