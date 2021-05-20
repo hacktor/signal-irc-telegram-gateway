@@ -95,7 +95,7 @@ for (;;) {
     # now poll the signal group for new messages
     my $json = JSON->new->allow_nonref;
     my ($out, $err, $ret) = tee {
-        system($sig->{cli},"-u",$sig->{phone},"receive","--json");
+        system($sig->{cli},"-u",$sig->{phone},"--output=json","receive");
     };
     print $dbg $out, $err if defined $dbg;
     notify($err) if $err;
