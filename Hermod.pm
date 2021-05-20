@@ -225,6 +225,12 @@ sub relay2sig {
     my ($line,$sig,$dbg) = @_;
     return unless defined $sig;
     return unless $line;
+
+    # revert to old behaviour unless we defined signal->transport->dbus
+    if (not defined $sig->{transport} or $sig->{transport} =~ /file/i) {
+        relayToFile($line,$sig->{infile},$dbg);
+    }
+
     my $text = '';
     if ($line =~ /^FILE!/) {
 
