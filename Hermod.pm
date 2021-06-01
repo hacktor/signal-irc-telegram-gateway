@@ -7,7 +7,27 @@ use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
 use Encode qw(encode_utf8);
-use Capture::Tiny 'capture';
+
+sub daemon {
+    
+    require POSIX;
+    POSIX::setsid or die "setsid: $!";
+    require POE::Component::Server::TCP;
+    POE::Component::Server::TCP->import;
+
+    my $cfg = shift;
+    my $out = (defined $cfg->{common}{debug}) ? $cfg->{common}{debug} : '/dev/null';
+
+    my $pid = fork() // die $!; #//
+    exit(0) if $pid;
+    chdir "/";
+    umask 0;
+    open(STDIN,"</dev/null");
+    open(STDOUT,">$out");
+    open(STDERR,">&STDOUT");
+
+    # daemon is now running
+}
 
 sub getmmlink {
 
