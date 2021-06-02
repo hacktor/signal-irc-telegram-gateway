@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+use warnings;
+use lib '/home/ruben/src/git/signal-irc-telegram-gateway';
+use POSIX;
+use POE qw(Component::Server::TCP);
+use JSON;
+use TOML;
+use Hermod;
+
+open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
+my ($cfg, $e) = from_toml do { local $/; <$fh> };
+unless ($cfg) {
+    die "Error parsing toml: $e";
+}
+
+# set process name
+$0 = 'hermod';
+
+POSIX::setsid or die "setsid: $!";
+my $out = (defined $cfg->{common}{debug}) ? $cfg->{common}{debug} : '/dev/null';
+
+my $pid = fork() // die $!; #//
+exit(0) if $pid;
+chdir "/";
+umask 0;
+open(STDIN,"</dev/null");
+open(STDOUT,">$out");
+open(STDERR,">&STDOUT");
+
+# daemon is now running
+POE::Component::Server::TCP->new(
+  Alias       => "echo_server",
+  Port        => (defined $cfg->{common}{port}) ? $cfg->{common}{port} : 31337,
+  ClientInput => sub {
+        my ($heap,$input) = @_[HEAP, ARG0];
+        print "Input: $input\n";
+        handle($input);
+    }
+);
+
+# Start the server.
+
+$poe_kernel->run();
+exit 0;
+
+sub handle {
+
+    my $input = shift;
+    return unless $input =~ /^{.*}$/;
+    my $msg;
+    eval { $msg = decode_json $input; };
+    if ($@) {
+        print "Failed to decode $input: $@\n";
+        return;
+    }
+    unless (ref $msg eq "HASH") {
+        print "$input is not a hash\n";
+        return;
+    }
+}
