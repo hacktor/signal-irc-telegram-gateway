@@ -122,7 +122,7 @@ look at its output; when something is said in the signal group you will see outp
 ```text
 {"envelope":{"source":"+316xxxxxxxx","sourceDevice":1,"relay":null,"timestamp":1566735523785,"isReceipt":false,"dataMessage":{"timestamp":1566735523785,"message":"Hello","expiresInSeconds":3600,"attachments":[],"groupInfo":{"groupId":"XXXXXXXXXXXXXXXXXXXXXX==","members":null,"name":null,"type":"DELIVER"}},"syncMessage":null,"callMessage":null}}
 ```
-Update **signal**->**gid** in hermod.json  with the **groupId** in this output.
+Update **signal**->**gid** in hermod.toml  with the **groupId** in this output.
 
 The signal poller does not see usernames, only telephone numbers. It would be kind of rude to relay these telephone numbers to Telegram or IRC, so the telephone numbers are anonymized as "Anonymous-XXXX", where XXXX are the last 4 numbers of the telephone number.
 
@@ -152,7 +152,7 @@ The **signal-cli** program by default saves all attachments in a directory **~/.
 Verify permissions on the **signal-\>infile** and **irc-\>infile** files. Both should be writable by the user running the scripts and also by the webserver that is executing the telegram webHook. Then you can start the bot.
 
 ```bash
-$ ./hermod
+$ ./ircbot
 Establishing connection to [irc.freenode.net]
 :weber.freenode.net NOTICE * :*** Looking up your hostname...
 :weber.freenode.net NOTICE * :*** Checking Ident
@@ -171,7 +171,8 @@ that's all. You will see messages scrolling showing the login proces on IRC.
 
 You probably want to run these in screen(1) from cron
 ```bash
-@reboot screen -S hermod -d -m while true; do /home/hermod/bin/hermod; done
+@reboot /home/hermod/bin/hermod
+@reboot screen -S ircbot -d -m while true; do /home/hermod/bin/ircbot; done
 @reboot screen -S signal -d -m while true; do /home/hermod/bin/signalbot; done
 @reboot screen -S matrix -d -m while true; do /home/hermod/bin/matrixpoller; done
 @reboot screen -S discord -d -m while true; do /home/hermod/bin/discordbot; done
