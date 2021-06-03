@@ -7,6 +7,29 @@ use JSON;
 use TOML;
 use Hermod;
 
+################################################################################
+# Hermod server                                                                #
+#                                                                              #
+# Provides connectivity between relay bots for different chat platforms        #
+# Uses Hermod.pm module for relaying incoming JSON messages to the configured  #
+# bots.                                                                        #
+#                                                                              #
+# example incoming JSON format:                                                #
+# {                                                                            #
+#   "token": "xxxxxxxyyyyyyyzzzzzzz",                                          #
+#   "from_chat": "signal",                                                     #
+#   "from_user": "John Smith",                                                 #
+#   "prefix": "[sig]",                                                         #
+#   "text": "Hi there folks!",                                                 #
+#   "file": "/path/to/file"                                                    #
+# }                                                                            #
+#                                                                              #
+# All fields are mandatory, except "file"                                      #
+#                                                                              #
+# 2021, Ruben de Groot                                                         #
+#                                                                              #
+################################################################################
+
 open my $fh, '<', "/etc/hermod.toml" or die "error opening configuration $!";
 my ($cfg, $e) = from_toml do { local $/; <$fh> };
 unless ($cfg) {
