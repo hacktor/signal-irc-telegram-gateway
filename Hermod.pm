@@ -125,6 +125,22 @@ sub relay2mtx {
     print $dbg $out, $err if defined $dbg;
 }
 
+sub relay2Tel {
+
+    my ($tel,$text,$dbg) = @_;
+    return unless defined $tel;
+
+    # we relay straight to telegram
+    my $telmsg;
+    $text = encode_utf8($text);
+    eval { $telmsg = uri_escape($text); };
+    $telmsg = uri_escape_utf8($text) if $@;
+    my ($out, $err, $ret) = capture {
+        system("curl", "-s", "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&parse_mode=MarkdownV2&text=$telmsg");
+    };
+    print $dbg $out, $err if defined $dbg;
+}
+
 sub relay2tel {
 
     my ($tel,$text,$dbg) = @_;
