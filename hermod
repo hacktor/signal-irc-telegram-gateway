@@ -17,9 +17,9 @@ use Hermod;
 # example incoming JSON format:                                                #
 # {                                                                            #
 #   "token": "xxxxxxxyyyyyyyzzzzzzz",                                          #
-#   "from_chat": "signal",                                                     #
-#   "from_user": "John Smith",                                                 #
-#   "prefix": "[sig]",                                                         #
+#   "chat": "signal",                                                          #
+#   "user": "John Smith",                                                      #
+#   "prefix": "sig",                                                           #
 #   "text": "Hi there folks!",                                                 #
 #   "file": "/path/to/file"                                                    #
 # }                                                                            #
@@ -52,12 +52,13 @@ open(STDERR,">&STDOUT");
 
 # daemon is now running
 POE::Component::Server::TCP->new(
-  Alias       => "echo_server",
+  Alias       => "hermod",
   Port        => (defined $cfg->{common}{port}) ? $cfg->{common}{port} : 31337,
   ClientInput => sub {
-        my ($heap,$input) = @_[HEAP, ARG0];
+        my ($kernel, $heap,$input) = @_[KERNEL, HEAP, ARG0];
         print "Input: $input\n";
-        handle($input);
+        $kernel->yield("shutdown");
+        print handle($input,$cfg);
     }
 );
 
@@ -68,7 +69,7 @@ exit 0;
 
 sub handle {
 
-    my $input = shift;
+    my ($input,$cfg) = @_;
     return unless $input =~ /^{.*}$/;
     my $msg;
     eval { $msg = decode_json $input; };
@@ -76,8 +77,28 @@ sub handle {
         print "Failed to decode $input: $@\n";
         return;
     }
-    unless (ref $msg eq "HASH") {
-        print "$input is not a hash\n";
-        return;
+    return "$input is not a hash\n" unless ref $msg eq "HASH";
+    return "Missing fields\n" unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token};
+    return "Token $msg->{token} mismatch\n" unless defined $msg->{token}
+        and $msg->{token} eq $cfg->{common}{token};
+
+    if ($msg->{file}) {
+    } else {
+
+        my $text;
+        unless ($msg->{chat} eq "telegram") {
+            ($text = $msg->{text}) =~ s/_/\\_/g;
+            $text =~ s/\*/\\*/g;
+            $text =~ s/\[/\\[/g;
+            $text =~ s/\]/\\]/g;
+            $text = '`['.$msg->{prefix}.'] '.$msg->{user}.':` '.$text."\n";
+            Hermod::relay2Tel($text, $cfg->{telegram});
+        }
+        Hermod::relay2irc($msg->{text}, $cfg->{irc}, "[$msg->{prefix}] $msg->{user}: ") unless $msg->{chat} eq "irc";
+        $text = "[$msg->{prefix}] $msg->{user}: $msg->{text}\n";
+        Hermod::relay2mm($text, $cfg->{mattermost}) unless $msg->{chat} eq "mattermost";
+        Hermod::relay2mtx($text, $cfg->{matrix}) unless $msg->{chat} eq "matrix";
+        Hermod::relay2dis($text, $cfg->{discord}) unless $msg->{chat} eq "discord";
+        Hermod::relay2sig($text, $cfg->{signal}) unless $msg->{chat} eq "signal";
     }
 }
