@@ -127,7 +127,7 @@ sub relay2mtx {
 
 sub relay2Tel {
 
-    my ($tel,$text,$dbg) = @_;
+    my ($text,$tel,$dbg) = @_;
     return unless defined $tel;
 
     # we relay straight to telegram
