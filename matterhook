@@ -46,11 +46,18 @@ while (my $cgi = CGI::Fast->new) {
         my $pre = "[mm] $dj->{user_name}: ";
 
         # send to other chats
-        Hermod::relay2irc($text,$irc,$pre,$dbg);
-        Hermod::relay2tel($tel,"$pre$text",$dbg);
-        Hermod::relay2mtx("$pre$text", $mat, $dbg);
-        Hermod::relay2dis("$pre$text", $dis, $dbg);
-        Hermod::relayToFile("$pre$text", $sig->{infile}, $dbg) if defined $sig->{infile};
+        Hermod::bridge({
+            chat => 'mattermost',
+            token => $cfg->{common}{token},
+            user => $dj->{user},
+            text => $dj->{text},
+            prefix => 'mm'}, $cfg);
+
+        #Hermod::relay2irc($text,$irc,$pre,$dbg);
+        #Hermod::relay2tel($tel,"$pre$text",$dbg);
+        #Hermod::relay2mtx("$pre$text", $mat, $dbg);
+        #Hermod::relay2dis("$pre$text", $dis, $dbg);
+        #Hermod::relayToFile("$pre$text", $sig->{infile}, $dbg) if defined $sig->{infile};
 
         if ($dj->{file_ids}) {
 
@@ -63,11 +70,18 @@ while (my $cgi = CGI::Fast->new) {
                     $pre = "[mm] **$dj->{user_name} sends a file: ";
 
                     # Relay links to other chats
-                    Hermod::relay2irc($link,$irc,$pre,$dbg);
-                    Hermod::relay2tel($tel,"$pre$link\n",$dbg);
-                    Hermod::relay2mtx("$pre$link\n",$mat,$dbg);
-                    Hermod::relay2dis("$pre$link\n",$dis,$dbg);
-                    Hermod::relayToFile("$pre$link\n",$sig->{infile},$dbg) if defined $sig->{infile};
+                    Hermod::bridge({
+                        chat => 'mattermost',
+                        token => $cfg->{common}{token},
+                        user => $dj->{user},
+                        text => $dj->{text},
+                        prefix => 'mm'}, $cfg);
+
+                    #Hermod::relay2irc($link,$irc,$pre,$dbg);
+                    #Hermod::relay2tel($tel,"$pre$link\n",$dbg);
+                    #Hermod::relay2mtx("$pre$link\n",$mat,$dbg);
+                    #Hermod::relay2dis("$pre$link\n",$dis,$dbg);
+                    #Hermod::relayToFile("$pre$link\n",$sig->{infile},$dbg) if defined $sig->{infile};
                 }
             }
         }
