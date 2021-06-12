@@ -1,6 +1,9 @@
 [common]
 notify      = "/home/hermod/bin/alarm"
 anon        = "Anonymous"
+debug       = "/home/hermod/log/hermod.debug"
+token       = "xxxxxxxyyyyyyyzzzzzzz"
+port        = 31337
 
 [irc]
 UseSSL      = 1
@@ -54,3 +57,14 @@ channel_id      = "9z9z9z9z9z9z9z9z9z9z9z9z9z"
 user_id         = "6c6c6c6c6c6c6c6c6c6c6c66c6"
 debug           = "/home/hermod/log/matterbot.debug"
 
+[discord]
+webhook         = "https://discord.com/api/webhooks/8888xxxxyyyyzzzz9999aaaaaa"
+userurl         = "https://discordapp.com/api/v6/users/"
+token           = "Xx1Xx1Xx1Xx1Xx1.AAAAAA.CCCCCCCmmmmmmmo3333333BBBBB"
+username        = "Hermod"
+user_id         = "800000000000000008"
+channel_id      = "300300300300300300"
+guild_id        = "800380038003800380"
+db              = "/home/hermod/db/discord.db"
+logdir          = "/home/hermod/log"
+debug           = "/home/hermod/log/discord.debug"

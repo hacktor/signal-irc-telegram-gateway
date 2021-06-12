@@ -25,6 +25,7 @@ DBI
 JSON;
 POE::Component::IRC
 POE::Component::IRC::Plugin::FollowTail
+POE::Component::Server::TCP
 Text::Unidecode
 Encode
 TOML
@@ -33,6 +34,7 @@ WWW::Curl::Easy
 WWW::Curl::Form
 Dancer
 Mojo::Discord
+IO::Socket::INET
 ```
 
 The first thing to do is add bot accounts in the different channels or groups.
