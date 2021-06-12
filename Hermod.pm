@@ -7,6 +7,35 @@ use WWW::Curl::Form;
 use URI::Escape;
 use Capture::Tiny 'capture';
 use Encode qw(encode_utf8);
+use IO::Socket::INET;
+
+sub bridge {
+
+    my ($msg,$cfg) = @_;
+    return "missing fields in message\n"
+        unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token} and $msg->{chat};
+
+    my $json;
+    eval {
+        $json = encode_json $msg;
+    };
+    return "Error in encode_json, sub bridge\n" if $@;
+
+    # auto-flush on socket
+    $| = 1;
+
+    # create a connecting socket
+    my $socket = new IO::Socket::INET (
+        PeerHost => '127.0.0.1',
+        PeerPort => (defined $cfg->{common}{port}) ? $cfg->{common}{port} : '31337',
+        Proto => 'tcp',
+    );
+    return "cannot connect to the server $!\n" unless $socket;
+
+    my $send = $socket->send($json);
+    $socket->shutdown(SHUT_RDWR);
+    return $json;
+}
 
 sub getmmlink {
 
