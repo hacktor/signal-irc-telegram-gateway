@@ -47,7 +47,7 @@ exit(0) if $pid;
 chdir "/";
 umask 0;
 open(STDIN,"</dev/null");
-open(STDOUT,">$out");
+open(STDOUT,">>$out");
 open(STDERR,">&STDOUT");
 
 # daemon is now running
@@ -59,13 +59,11 @@ POE::Component::Server::TCP->new(
         print "Input: $input\n";
         $kernel->yield("shutdown");
         print handle($input,$cfg);
-    }
+  },
 );
 
 # Start the server.
-
 $poe_kernel->run();
-exit 0;
 
 sub handle {
 
@@ -78,7 +76,7 @@ sub handle {
         return;
     }
     return "$input is not a hash\n" unless ref $msg eq "HASH";
-    return "Missing fields\n" unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token};
+    return "Missing fields\n" unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token} and $msg->{chat};
     return "Token $msg->{token} mismatch\n" unless defined $msg->{token}
         and $msg->{token} eq $cfg->{common}{token};
 
