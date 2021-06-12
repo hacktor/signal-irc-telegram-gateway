@@ -102,7 +102,7 @@ while (my $cgi = CGI::Fast->new) {
                 } else {
                     print $dbg "Error getting $type $name $file\n" if defined $dbg;
                 }
-            }
+            };
         }
 
         # is the message a poll?
