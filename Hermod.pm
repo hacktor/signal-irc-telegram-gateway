@@ -58,7 +58,7 @@ sub relay2mm {
     return unless defined $mm;
 
     my $json = JSON->new->allow_nonref;
-    $text = $json->encode({attachments => [{text => $text}]});
+    $text = $json->encode({attachments => [{text => $text}], username => $mm->{user_name}});
 
     my $curl = WWW::Curl::Easy->new;
     my $response_body;
