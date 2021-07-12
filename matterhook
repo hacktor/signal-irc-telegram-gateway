@@ -71,7 +71,10 @@ while (my $cgi = CGI::Fast->new) {
                         user => $dj->{user_name},
                         file => $link,
                         prefix => 'mm'}, $cfg);
-                    print $dbg "$res\n" if $dbg and $res ne "OK";
+                    print $dbg "FILE $link $res\n" if $dbg;
+                    #print $dbg "$res\n" if $dbg and $res ne "OK";
+                } else {
+                    print $dbg "Fail retrieving file_id $id\n";
                 }
             }
         }

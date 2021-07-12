@@ -4,6 +4,8 @@ use JSON;
 use TOML;
 use WWW::Curl::Easy;
 use WWW::Curl::Form;
+use LWP::UserAgent;
+use HTTP::Request;
 use URI::Escape;
 use Capture::Tiny 'capture';
 use Encode qw(encode_utf8);
@@ -13,7 +15,9 @@ sub bridge {
 
     my ($msg,$cfg) = @_;
     return "missing fields in message\n"
-        unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token} and $msg->{chat};
+        unless $msg->{user} and $msg->{prefix} and $msg->{token} and $msg->{chat};
+    return "no content in message\n"
+        unless $msg->{text} or $msg->{file};
 
     my $json;
     eval {
@@ -32,9 +36,9 @@ sub bridge {
     );
     return "cannot connect to the server $!\n" unless $socket;
 
-    my $send = $socket->send($json);
+    my $send = $socket->send("$json\n");
     $socket->shutdown(SHUT_RDWR);
-    return $json;
+    return "OK";
 }
 
 sub getmmlink {
@@ -58,7 +62,8 @@ sub relay2mm {
     return unless defined $mm;
 
     my $json = JSON->new->allow_nonref;
-    $text = $json->encode({attachments => [{text => $text}]});
+    #$text = $json->encode({attachments => [{username => $mm->{user_name}, text => $text}]});
+    $text = $json->encode({attachments => [{text => $text}], username => $mm->{user_name}});
 
     my $curl = WWW::Curl::Easy->new;
     my $response_body;
@@ -154,22 +159,6 @@ sub relay2mtx {
     print $dbg $out, $err if defined $dbg;
 }
 
-sub relay2Tel {
-
-    my ($text,$tel,$dbg) = @_;
-    return unless defined $tel;
-
-    # we relay straight to telegram
-    my $telmsg;
-    $text = encode_utf8($text);
-    eval { $telmsg = uri_escape($text); };
-    $telmsg = uri_escape_utf8($text) if $@;
-    my ($out, $err, $ret) = capture {
-        system("curl", "-s", "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&parse_mode=MarkdownV2&text=$telmsg");
-    };
-    print $dbg $out, $err if defined $dbg;
-}
-
 sub relay2tel {
 
     my ($tel,$text,$dbg) = @_;
@@ -184,6 +173,28 @@ sub relay2tel {
         system("curl", "-s", "https://api.telegram.org/bot$tel->{token}/sendMessage?chat_id=$tel->{chat_id}&text=$telmsg");
     };
     print $dbg $out, $err if defined $dbg;
+}
+
+sub relay2Tel {
+
+    # uses markdown
+    my ($text,$tel) = @_;
+    return unless defined $tel;
+
+    my $URL = "https://api.telegram.org/bot$tel->{token}/sendMessage";
+    my $json = encode_json { chat_id => $tel->{chat_id}, parse_mode => "MarkdownV2", text => "$text", };
+    my $req = HTTP::Request->new( 'POST', $URL );
+    $req->header( 'Content-Type' => 'application/json' );
+    $req->content( $json );
+    my $lwp = LWP::UserAgent->new;
+    my $resp = $lwp->request( $req );
+    if ($resp->is_success) {
+         print "SUCCES\n";
+         print $resp->decoded_content."\n";
+    }
+    else {
+        print STDERR $resp->status_line, "\n";
+    }
 }
 
 sub relayFile2tel {

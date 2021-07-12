@@ -57,8 +57,8 @@ POE::Component::Server::TCP->new(
   ClientInput => sub {
         my ($kernel, $heap,$input) = @_[KERNEL, HEAP, ARG0];
         print "Input: $input\n";
-        $kernel->yield("shutdown");
         print handle($input,$cfg);
+        #$kernel->yield("shutdown");
   },
 );
 
@@ -68,6 +68,7 @@ $poe_kernel->run();
 sub handle {
 
     my ($input,$cfg) = @_;
+print "Handling $input\n";
     return unless $input =~ /^{.*}$/;
     my $msg;
     eval { $msg = decode_json $input; };
@@ -76,24 +77,36 @@ sub handle {
         return;
     }
     return "$input is not a hash\n" unless ref $msg eq "HASH";
-    return "Missing fields\n" unless $msg->{user} and $msg->{prefix} and $msg->{text} and $msg->{token} and $msg->{chat};
+    return "Missing fields\n" unless $msg->{user} and $msg->{prefix} and $msg->{token} and $msg->{chat};
+    return "No content\n" unless $msg->{text} or $msg->{file};
     return "Token $msg->{token} mismatch\n" unless defined $msg->{token}
         and $msg->{token} eq $cfg->{common}{token};
 
+    (my $teltext = $msg->{text}) =~ s/([\*\[\]_`])/\\$1/g if $msg->{text};
     if ($msg->{file}) {
+
+        unless ($msg->{chat} eq "telegram") {
+            if ($msg->{path}) {
+
+            } else {
+                my $text = '`['.$msg->{prefix}.']` **'.$msg->{user}.' sends file '.$msg->{file};
+                $text .= " with caption ".$teltext if $teltext;
+print "2Tel: $text\n\n";
+                Hermod::relay2Tel($text,$cfg->{telegram});
+                #Hermod::relay2tel($cfg->{telegram},$text);
+print "READY\n";
+            }
+        }
+
     } else {
 
-        my $text;
         unless ($msg->{chat} eq "telegram") {
-            ($text = $msg->{text}) =~ s/_/\\_/g;
-            $text =~ s/\*/\\*/g;
-            $text =~ s/\[/\\[/g;
-            $text =~ s/\]/\\]/g;
-            $text = '`['.$msg->{prefix}.'] '.$msg->{user}.':` '.$text."\n";
-            Hermod::relay2Tel($text, $cfg->{telegram});
+
+            $teltext = '`['.$msg->{prefix}.'] '.$msg->{user}.':` '.$teltext."\n";
+            Hermod::relay2Tel($teltext, $cfg->{telegram});
         }
         Hermod::relay2irc($msg->{text}, $cfg->{irc}, "[$msg->{prefix}] $msg->{user}: ") unless $msg->{chat} eq "irc";
-        $text = "[$msg->{prefix}] $msg->{user}: $msg->{text}\n";
+        my $text = "[$msg->{prefix}] $msg->{user}: $msg->{text}\n";
         Hermod::relay2mm($text, $cfg->{mattermost}) unless $msg->{chat} eq "mattermost";
         Hermod::relay2mtx($text, $cfg->{matrix}) unless $msg->{chat} eq "matrix";
         Hermod::relay2dis($text, $cfg->{discord}) unless $msg->{chat} eq "discord";
