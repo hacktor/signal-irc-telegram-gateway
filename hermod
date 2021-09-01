@@ -68,7 +68,6 @@ $poe_kernel->run();
 sub handle {
 
     my ($input,$cfg) = @_;
-print "Handling $input\n";
     return unless $input =~ /^{.*}$/;
     my $msg;
     eval { $msg = decode_json $input; };
@@ -91,10 +90,7 @@ print "Handling $input\n";
             } else {
                 my $text = '`['.$msg->{prefix}.']` **'.$msg->{user}.' sends file '.$msg->{file};
                 $text .= " with caption ".$teltext if $teltext;
-print "2Tel: $text\n\n";
                 Hermod::relay2Tel($text,$cfg->{telegram});
-                #Hermod::relay2tel($cfg->{telegram},$text);
-print "READY\n";
             }
         }
 
