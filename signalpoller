@@ -104,6 +104,8 @@ for (;;) {
     for my $line (@lines) {
 
         my $sav;
+        print $dbg $line if defined $dbg;
+
         my $sigmsg = $json->decode($line);
         next unless defined $sigmsg->{envelope}->{dataMessage};
         $sigmsg = $sigmsg->{envelope};
@@ -175,6 +177,9 @@ for (;;) {
         # only relay group messages with contents
         next unless $group eq $sig->{gid};
         next unless $text or $attach;
+
+        # dry-run
+        next if defined $sig->{dryrun} and $sig->{dryrun};
 
         # relay to all chats
         my $pre = "[sig] $anonsender: ";
