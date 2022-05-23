@@ -197,7 +197,7 @@ while (my $cgi = CGI::Fast->new) {
 
         # optional append file link url
         my $ftext = ($ircfline) ? "$text $ircfline" : $text;
-        my $pre = "[tel] $first $last: ";
+        my $pre = ($text =~ /^[`!]/) ? "" : "[tel] $first $last: ";
 
         Hermod::relay2irc("$ftext\n",$irc,$pre,$dbg);
         Hermod::relay2mtx("$pre$ftext\n",$mat,$dbg);
